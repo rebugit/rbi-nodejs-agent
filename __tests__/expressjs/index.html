@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>My Magic number</title>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+</head>
+<body>
+
+<nav class="navbar" role="navigation" aria-label="main navigation">
+	<div class="navbar-brand">
+		<a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+			<span aria-hidden="true"></span>
+			<span aria-hidden="true"></span>
+			<span aria-hidden="true"></span>
+		</a>
+	</div>
+
+	<div id="navbarBasicExample" class="navbar-menu">
+		<div class="navbar-start">
+			<a class="navbar-item">
+				Home
+			</a>
+
+			<a class="navbar-item">
+				Documentation
+			</a>
+
+			<div class="navbar-item has-dropdown is-hoverable">
+				<a class="navbar-link">
+					More
+				</a>
+
+				<div class="navbar-dropdown">
+					<a class="navbar-item">
+						About
+					</a>
+					<a class="navbar-item">
+						Jobs
+					</a>
+					<a class="navbar-item">
+						Contact
+					</a>
+					<hr class="navbar-divider">
+					<a class="navbar-item">
+						Report an issue
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<div class="navbar-end">
+			<div class="navbar-item">
+				<div class="buttons">
+					<a class="button is-primary">
+						<strong>Sign up</strong>
+					</a>
+					<a class="button is-light">
+						Log in
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</nav>
+<br><br>
+<div class="container">
+	<div class="notification is-primary">
+		<h1 class="title is-1">My Magic Number</h1>
+	</div>
+
+	<br><br>
+
+
+	<div class="card">
+
+		<div id="error-section"></div>
+
+		<div class="card-image" style="padding: 50px">
+			<form id="form">
+				<label class="label">Your number</label>
+				<input class="input is-success" type="number" placeholder="Insert your number" id="input-number">
+
+				<br><br>
+				<div class="field is-grouped">
+					<p class="control">
+						<button class="button is-success" id="submit-btn" type="submit">
+							Submit
+						</button>
+					</p>
+				</div>
+
+			</form>
+		</div>
+		<div class="card-content">
+			<div class="media">
+				<div class="media-content">
+					<h1 class="title is-2">Your magic number is: </h1>
+					<h1 style="color: coral;font-weight: bold" class="title is-2" id="result-number"></h1>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>
+
+
+</body>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+
+    document.querySelector("#submit-btn").addEventListener('click', (e) => {
+        const value = document.querySelector("#input-number").value;
+
+        e.preventDefault()
+        axios({
+            method: "post",
+            url: 'http://localhost:9000',
+            data: {
+                num: value
+            }
+        }).then(resp => {
+            console.log(resp.data)
+
+            document.querySelector("#result-number").innerHTML = Math.floor(resp.data.magicNumber).toString()
+        }).catch(err => {
+            document.querySelector("#result-number").innerHTML = ""
+
+            document.querySelector("#error-section").innerHTML = `
+		    <article class="message is-danger">
+			  <div class="message-header">
+				<p>ERROR!! ${err.response.data}</p>
+				<button class="delete" aria-label="delete"></button>
+			  </div>
+			  <div class="message-body">
+				${err.response.data}
+			  </div>
+			</article>
+		    `
+        }).finally(() =>{
+            document.querySelector("#input-number").value = ""
+        })
+    })
+
+</script>
+</html>
