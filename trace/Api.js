@@ -1,10 +1,10 @@
-const https = require('http')
+const https = require('https')
 
 class TraceServiceApi {
     constructor() {
         this.host = process.env.REBUGIT_BASE_URL || 'localhost'
         this.token = process.env.REBUGIT_TOKEN
-        this.apiKey = process.env.REBUGIT_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJjNDE5YzcyMi05MWE2LTQxYWYtOTliNi0yMzY3YzVkMmM0ZjciLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.yqi8gHb1pYQpKFTZ70lXTfTXOzviDD5RE6lMKJv0YXA'
+        this.apiKey = process.env.REBUGIT_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiIyY2M2ZjM5NS04OWM5LTRlMjItOTVkNy03MDdlZGU3MjdlZTgiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.0LhlaPjKOyfmH7ze5yUxKADCm08wAqh5SzcwgTxs4gI'
     }
 
     async createError(tracer, error) {
@@ -17,7 +17,7 @@ class TraceServiceApi {
             const resp = await this._post('/traces', data)
             console.log(resp.data)
         } catch (e) {
-            console.log(e.message)
+            console.log("error", e.message)
             // no-op
         }
     }
@@ -30,7 +30,7 @@ class TraceServiceApi {
     async _post(path, data) {
         const options = {
             hostname: this.host,
-            port: 8080,
+            port: 443,
             path,
             method: 'POST',
             headers: {

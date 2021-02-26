@@ -2,14 +2,14 @@ class ErrorDomain {
     constructor(traceId, error) {
         this.traceId = traceId
         this.message = error.message
-        this.stackTrace = error.stackTrace
+        this.stack = error.stack
     }
 
     getError(){
         return {
             traceId: this.traceId,
             message: this.message,
-            stackTrace: this.stackTrace
+            stackTrace: this.stack
         }
     }
 }
