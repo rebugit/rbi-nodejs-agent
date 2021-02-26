@@ -1,24 +1,20 @@
-const axios = require('axios')
+const https = require('http')
 
 class TraceServiceApi {
     constructor() {
-        const BASE_URL = process.env.CARPE_DIEM_BASE_URL || 'http://localhost:8080'
-        const TENANT_ID = 'd0b38056-4ebf-4ba1-85e1-1499eaf1e42a' // for now hardcoded
-        this.baseUrl = BASE_URL
-        this.tenantId = TENANT_ID
+        this.host = process.env.REBUGIT_BASE_URL || 'localhost'
+        this.token = process.env.REBUGIT_TOKEN
+        this.apiKey = process.env.REBUGIT_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJjNDE5YzcyMi05MWE2LTQxYWYtOTliNi0yMzY3YzVkMmM0ZjciLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.yqi8gHb1pYQpKFTZ70lXTfTXOzviDD5RE6lMKJv0YXA'
     }
 
-    async createMany(tracer) {
+    async createError(tracer, error) {
         try {
-            const options = {
-                method: 'POST',
-                data: {
-                    traces: tracer.spans()
-                },
-                url: `${this.baseUrl}/tenants/${this.tenantId}/traces`,
-            };
+            const data = {
+                traces: tracer.spans(),
+                error: error.getError()
+            }
 
-            const resp = await axios(options)
+            const resp = await this._post('/traces', data)
             console.log(resp.data)
         } catch (e) {
             console.log(e.message)
@@ -26,14 +22,77 @@ class TraceServiceApi {
         }
     }
 
-    async findByTraceId(traceId = process.env.CARPE_DIEM_TRACE_ID) {
-        const options = {
-            method: 'GET',
-            url: `${this.baseUrl}/tenants/${this.tenantId}/traces/${traceId}`,
-        };
-
-        const resp = await axios(options)
+    async findByTraceId(traceId = process.env.REBUGIT_TRACE_ID) {
+        const resp = await this._get(`/traces/${traceId}`)
         return resp.data
+    }
+
+    async _post(path, data) {
+        const options = {
+            hostname: this.host,
+            port: 8080,
+            path,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                "x-rebugit-apikey": this.apiKey
+            }
+        }
+
+        return this._request(options, data)
+    }
+
+    async _get(path) {
+        const options = {
+            hostname: this.host,
+            port: 443,
+            path,
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                "x-rebugit-apikey": this.apiKey,
+                Authorization: this.token,
+            }
+        }
+
+        return this._request(options)
+
+    }
+
+    async _request(options, data) {
+        return new Promise((resolve, reject) => {
+            const req = https.request(options, res => {
+                res.setEncoding('utf8');
+
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    return reject(new Error('statusCode=' + res.statusCode));
+                }
+
+                let body = [];
+                res.on('data', function (chunk) {
+                    body.push(chunk);
+                });
+
+                res.on('end', function () {
+                    try {
+                        body = JSON.parse(body);
+                    } catch (e) {
+                        reject(e);
+                    }
+                    resolve(body);
+                });
+            })
+
+            req.on('error', function (err) {
+                reject(err);
+            });
+
+            if (data) {
+                req.write(JSON.stringify(data));
+            }
+
+            req.end();
+        })
     }
 }
 

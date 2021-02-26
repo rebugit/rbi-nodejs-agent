@@ -3,7 +3,7 @@ const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
 const cors = require('cors')
 // This package must be imported even if there are no methods to require
-const {expressMiddleware, expressErrorHandler} = require('../agent-nodejs');
+const {expressMiddleware, expressErrorHandler} = require('../../index');
 const bodyParser = require('body-parser')
 const express = require('express')
 const app = express()
@@ -73,11 +73,11 @@ app.post('/', async (req, res, next) => {
     const length = data.title.length;
     console.log("Title length: ", length)
 
-    if (length - num === 0){
+    if (length - num === 0) {
         return next(new Error("Error: division by 0!!"))
     }
 
-    const magicNumber =  18 / (length - num)
+    const magicNumber = 18 / (length - num)
 
     res.status(200).send({
         magicNumber

@@ -1,5 +1,6 @@
 const http = require('http')
 const shimmer = require('shimmer');
+const {ErrorDomain} = require("./trace/ErrorDomain");
 const {ExpressIntegration} = require("./integrations/expressIntegration");
 const {TracesLoader} = require("./trace/TracesLoader");
 const {TraceServiceApi} = require("./trace/Api");
@@ -25,7 +26,7 @@ const expressMiddleware = (config) => async (req, res, next) => {
         console.log("FINISHED")
     });
 
-    if (process.env.CARPE_DIEM_ENV === 'debug') {
+    if (process.env.REBUGIT_ENV === 'debug') {
         const traces = await api.findByTraceId()
         tracesLoader.load(traces)
         // Inject execution
@@ -42,7 +43,7 @@ const expressMiddleware = (config) => async (req, res, next) => {
 
     const span = expressIntegration.getSpan(tracer.traceId, req);
     tracer.addSpan(span)
-    res.locals['carpediem-context'] = {tracer};
+    res.locals['rebugit-context'] = {tracer};
     next()
 }
 
@@ -50,23 +51,43 @@ const expressErrorHandler = ({Sentry}) => (err, req, res, next) => {
     // COMMENT: maybe we should unwrap two times, but we must unwrap before we send the request
     // TODO: revisit this
 
-    if (process.env.CARPE_DIEM_ENV === 'debug') {
+    if (process.env.REBUGIT_ENV === 'debug') {
         return next(err)
     }
 
     shimmer.unwrap(http, 'request');
 
-    const carpediemContext = res.locals['carpediem-context'];
+    const rebugitContext = res.locals['rebugit-context'];
 
     if (Sentry){
-        Sentry.setTag("carpe-diem-traceId", carpediemContext.tracer.traceId);
+        Sentry.setTag("rebugit-traceId", rebugitContext.tracer.traceId);
     }
 
-    delete res.locals['carpediem-context']
-    console.log("CONTEXT", carpediemContext.tracer.traceId)
+    delete res.locals['rebugit-context']
+    console.log("CONTEXT", rebugitContext.tracer.traceId)
 
-    api.createMany(carpediemContext.tracer).then()
+    const errorDomain = new ErrorDomain(rebugitContext.tracer.traceId, err);
+
+    api.createError(rebugitContext.tracer, errorDomain).then()
     next(err)
+}
+
+class RebugitSDK {
+    /**
+     * Config object
+     * @param {string} apiKey
+     */
+    constructor({apiKey}) {
+
+    }
+
+    initIntegrations(){
+
+    }
+
+    endIntegrations(){
+
+    }
 }
 
 module.exports = {

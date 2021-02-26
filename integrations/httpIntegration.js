@@ -16,7 +16,7 @@ class HttpIntegration {
     constructor(tracer, tracesLoader, config) {
         this.tracer = tracer
         this.tracesLoader = tracesLoader
-        this.CARPE_DIEM_ENV = process.env.CARPE_DIEM_ENV
+        this.REBUGIT_ENV = process.env.REBUGIT_ENV
         this.config = config || []
     }
 
@@ -40,7 +40,7 @@ class HttpIntegration {
                 const correlationId = this.getCorrelationId(method, host, path);
 
                 try {
-                    if (this.CARPE_DIEM_ENV === 'debug') {
+                    if (this.REBUGIT_ENV === 'debug') {
                         const data = this.tracesLoader.get(correlationId);
                         const wrappedCallback = (res) => {
                             const customRes = new events.EventEmitter()
