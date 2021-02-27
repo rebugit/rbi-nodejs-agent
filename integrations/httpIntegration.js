@@ -1,4 +1,6 @@
 const events = require("events");
+const shimmer = require("shimmer");
+const {Integrations} = require("./integrations");
 const {parse, stringify} = require('flatted');
 const {Span} = require('../trace/Span')
 
@@ -6,7 +8,7 @@ const {Span} = require('../trace/Span')
  * @typedef {{extraFields: string[]}} Config
  */
 
-class HttpIntegration {
+class HttpIntegration extends Integrations {
     /**
      *
      * @param tracer
@@ -14,20 +16,35 @@ class HttpIntegration {
      * @param {Config} config
      */
     constructor(tracer, tracesLoader, config) {
+        super()
         this.tracer = tracer
         this.tracesLoader = tracesLoader
         this.REBUGIT_ENV = process.env.REBUGIT_ENV
-        this.config = config || []
+        this.config = config
+
+        const http = this.require("http");
+        if (http) {
+            this._http = http
+            shimmer.wrap(http, 'request', this.wrap());
+        }
+
+        const https = this.require("https");
+        if (https) {
+            this._https = https
+            shimmer.wrap(https, 'request', this.wrap());
+        }
     }
 
     getCorrelationId = (method, host, path) => {
         return `${method}_${host}_${path}`
     }
 
-    setExtraFields(res, data){
-        this.config.extraFields.forEach(field => {
-            data[field] = res[field]
-        })
+    setExtraFields(res, data) {
+        if (this.config.extraFields){
+            this.config.extraFields.forEach(field => {
+                data[field] = res[field]
+            })
+        }
     }
 
     wrap() {
@@ -44,7 +61,8 @@ class HttpIntegration {
                         const data = this.tracesLoader.get(correlationId);
                         const wrappedCallback = (res) => {
                             const customRes = new events.EventEmitter()
-                            customRes.setEncoding = function () {}
+                            customRes.setEncoding = function () {
+                            }
 
                             process.nextTick(() => {
                                 customRes.emit('data', data.body)
@@ -95,6 +113,16 @@ class HttpIntegration {
                     return request.apply(this, [options, callback]);
                 }
             };
+        }
+    }
+
+    end() {
+        if (this._http) {
+            shimmer.unwrap(this._http, 'request');
+        }
+
+        if (this._https) {
+            shimmer.unwrap(this._https, 'request');
         }
     }
 }

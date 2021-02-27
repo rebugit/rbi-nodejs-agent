@@ -1,10 +1,11 @@
 const https = require('https')
 
 class TraceServiceApi {
-    constructor() {
-        this.host = process.env.REBUGIT_BASE_URL || 'localhost'
+    constructor({apiKey}) {
+        const host = 'localhost'
+        this.host = process.env.REBUGIT_BASE_URL || host
         this.token = process.env.REBUGIT_TOKEN
-        this.apiKey = process.env.REBUGIT_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiIyY2M2ZjM5NS04OWM5LTRlMjItOTVkNy03MDdlZGU3MjdlZTgiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.0LhlaPjKOyfmH7ze5yUxKADCm08wAqh5SzcwgTxs4gI'
+        this.apiKey = process.env.REBUGIT_API_KEY || apiKey
     }
 
     async createError(tracer, error) {

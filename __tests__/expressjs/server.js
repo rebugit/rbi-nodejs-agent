@@ -3,11 +3,15 @@ const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
 const cors = require('cors')
 // This package must be imported even if there are no methods to require
-const {expressMiddleware, expressErrorHandler} = require('../../index');
+const {expressMiddleware, expressErrorHandler, RebugitSDK} = require('../../index');
 const bodyParser = require('body-parser')
 const express = require('express')
 const app = express()
 const port = 9000
+
+const Rebugit = new RebugitSDK({
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmNjEyNTcwZi04MzU0LTQ2MGQtOWJhZi00MzYwNmZlNWFlOTQiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ZAIk8rh9QX9Pz5tH843hn-uhIkvdxvwt1x1BQuJwKpE'
+})
 
 Sentry.init({
     dsn: "https://9cd1dff7aff84daeb2bdf110e9aa8d80@o260622.ingest.sentry.io/5636379",
@@ -57,7 +61,7 @@ const callExternalAPI = async () => {
 app.use(cors())
 app.use(bodyParser.json())
 app.use(Sentry.Handlers.requestHandler());
-app.use(expressMiddleware({}))
+app.use(Rebugit.Handlers().requestHandler())
 app.post('/', async (req, res, next) => {
     const {num} = req.body
     console.log("Received number: ", num)
@@ -84,7 +88,7 @@ app.post('/', async (req, res, next) => {
     })
 })
 
-app.use(expressErrorHandler({Sentry}))
+app.use(Rebugit.Handlers().errorHandler({Sentry}))
 app.use(Sentry.Handlers.errorHandler());
 
 app.use(function onError(err, req, res, next) {
