@@ -26,7 +26,3 @@ export class Tracer {
         })
     }
 }
-
-module.exports = {
-    Tracer
-}

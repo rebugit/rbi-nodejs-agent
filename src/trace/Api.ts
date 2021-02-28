@@ -5,6 +5,11 @@ import {IErrorDomain} from "./ErrorDomain";
 const https = require('https')
 const logger = require('../logger')
 
+interface ITraceServiceApi {
+    findByTraceId(traceId: string): Promise<ITrace[]>
+    createError(tracer, error): Promise<void>
+}
+
 interface IApiResponse<T> {
     data: T
 }
@@ -14,10 +19,11 @@ interface IData {
     error: IErrorDomain
 }
 
-export class TraceServiceApi {
+export class TraceServiceApi implements ITraceServiceApi {
     private readonly host: string;
     private readonly token: string;
     private readonly apiKey: string;
+
     constructor({apiKey}) {
         const host = 'localhost' // TODO: substitute with live application host
         this.host = process.env.REBUGIT_BASE_URL || host
@@ -45,7 +51,7 @@ export class TraceServiceApi {
         return resp.data
     }
 
-    async _post(path: string, data: IData): Promise<IApiResponse<string>> {
+    private async _post(path: string, data: IData): Promise<IApiResponse<string>> {
         const options: RequestOptions = {
             hostname: this.host,
             port: 443,
@@ -60,7 +66,7 @@ export class TraceServiceApi {
         return this._request(options, data)
     }
 
-    async _get(path: string): Promise<IApiResponse<ITrace[]>> {
+    private async _get(path: string): Promise<IApiResponse<ITrace[]>> {
         const options: RequestOptions = {
             hostname: this.host,
             port: 443,

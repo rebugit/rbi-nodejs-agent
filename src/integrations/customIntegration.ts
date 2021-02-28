@@ -13,7 +13,7 @@ export type customIntegrationCallback = (
     env: string,
     close: (data: any, correlationId: string) => void,
     getData: (correlationId: string) => any,
-    wrap: (original: any) => any
+    wrap: (module: any, method: string, callback: (original: any) => any) => any
 ) => { module: any, name: string }
 
 /**
@@ -24,21 +24,17 @@ export class CustomIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
     private tracesLoader: TracesLoader;
     private config: IIntegrationConfig;
-    private readonly name: string;
-    private readonly module: any;
+    private name: string;
+    private module: any;
+    private readonly callback: customIntegrationCallback;
 
     constructor(customIntegrationCallback: customIntegrationCallback) {
         super();
 
-        const {module, name} = customIntegrationCallback(
-            this.env,
-            this.conclude,
-            this.retrieveData,
-            shimmer.wrap
-        );
+        this.retrieveData = this.retrieveData.bind(this);
+        this.close = this.close.bind(this);
 
-        this.module = module
-        this.name = name
+        this.callback = customIntegrationCallback
     }
 
     end(): void {
@@ -49,9 +45,19 @@ export class CustomIntegration extends Integrations implements IIntegration {
         this.tracer = tracer
         this.tracesLoader = tracesLoader
         this.config = config || {}
+
+        const {module, name} = this.callback(
+            this.env,
+            this.close,
+            this.retrieveData,
+            shimmer.wrap
+        );
+
+        this.module = module
+        this.name = name
     }
 
-    private conclude(data: any, correlationId: string) {
+    private close(data: any, correlationId: string) {
         const obj: ITrace = {
             data: stringify(data),
             correlationId,

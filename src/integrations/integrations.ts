@@ -2,9 +2,8 @@ export class Integrations {
     protected env: any;
 
     constructor() {
-        this.env = process.env.REBUGIT_ENV
+        this.env = process.env.REBUGIT_ENV || 'dev'
     }
-
 
     private static isModulePresent(moduleName): string | undefined {
         try {
