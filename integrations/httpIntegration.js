@@ -1,8 +1,9 @@
 const events = require("events");
 const shimmer = require("shimmer");
 const {Integrations} = require("./integrations");
-const {parse, stringify} = require('flatted');
+const {stringify} = require('flatted');
 const {Span} = require('../trace/Span')
+const logger = require('../logger')
 
 /**
  * @typedef {{extraFields: string[]}} Config
@@ -19,8 +20,9 @@ class HttpIntegration extends Integrations {
         super()
         this.tracer = tracer
         this.tracesLoader = tracesLoader
-        this.REBUGIT_ENV = process.env.REBUGIT_ENV
+        this.env = process.env.REBUGIT_ENV
         this.config = config
+        this.namespace = 'httpIntegration'
 
         const http = this.require("http");
         if (http) {
@@ -40,7 +42,7 @@ class HttpIntegration extends Integrations {
     }
 
     setExtraFields(res, data) {
-        if (this.config.extraFields){
+        if (this.config.extraFields) {
             this.config.extraFields.forEach(field => {
                 data[field] = res[field]
             })
@@ -57,8 +59,9 @@ class HttpIntegration extends Integrations {
                 const correlationId = this.getCorrelationId(method, host, path);
 
                 try {
-                    if (this.REBUGIT_ENV === 'debug') {
+                    if (this.env === 'debug') {
                         const data = this.tracesLoader.get(correlationId);
+                        logger.info(`trace loaded: ${data}`, this.namespace)
                         const wrappedCallback = (res) => {
                             const customRes = new events.EventEmitter()
                             customRes.setEncoding = function () {
@@ -80,9 +83,8 @@ class HttpIntegration extends Integrations {
                             let output = '';
 
                             res.on('data', (chunk) => {
-                                    output += chunk;
-                                }
-                            );
+                                output += chunk;
+                            });
 
                             res.on('end', () => {
                                 const data = {
@@ -109,7 +111,7 @@ class HttpIntegration extends Integrations {
                         return request.call(this, options, wrappedCallback);
                     }
                 } catch (error) {
-                    console.log(error.message, error.stack)
+                    logger.error(error, this.namespace)
                     return request.apply(this, [options, callback]);
                 }
             };

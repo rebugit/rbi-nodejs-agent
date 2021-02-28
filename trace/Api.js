@@ -1,10 +1,11 @@
 const https = require('https')
+const logger = require('../logger')
 
 class TraceServiceApi {
     constructor({apiKey}) {
-        const host = 'localhost'
+        const host = 'localhost' // TODO: substitute with live application host
         this.host = process.env.REBUGIT_BASE_URL || host
-        this.token = process.env.REBUGIT_TOKEN
+        this.token = process.env.REBUGIT_TOKEN || ''
         this.apiKey = process.env.REBUGIT_API_KEY || apiKey
     }
 
@@ -16,9 +17,9 @@ class TraceServiceApi {
             }
 
             const resp = await this._post('/traces', data)
-            console.log(resp.data)
+            logger.info(`create error response: ${resp.data}`)
         } catch (e) {
-            console.log("error", e.message)
+            logger.error(e)
             // no-op
         }
     }
@@ -57,7 +58,6 @@ class TraceServiceApi {
         }
 
         return this._request(options)
-
     }
 
     async _request(options, data) {

@@ -3,7 +3,7 @@ const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
 const cors = require('cors')
 // This package must be imported even if there are no methods to require
-const {expressMiddleware, expressErrorHandler, RebugitSDK} = require('../../index');
+const {RebugitSDK} = require('../../index');
 const bodyParser = require('body-parser')
 const express = require('express')
 const app = express()
