@@ -2,11 +2,11 @@ import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegrationConfig} from "../config";
 import {IIntegration} from "./index";
+import {Integrations} from "./integrations";
 
 const url = require("url");
 const events = require("events");
 const shimmer = require("shimmer");
-const {Integrations} = require("./integrations");
 const {stringify} = require('flatted');
 const {Trace} = require('../trace/Trace')
 const logger = require('../logger')
@@ -21,14 +21,16 @@ interface IHttpTraceData {
 export class HttpIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
     private tracesLoader: TracesLoader;
-    private readonly env: string;
     private config: IIntegrationConfig;
     private readonly namespace: string;
+    private _http: null;
+    private _https: null;
 
     constructor() {
         super()
-        this.env = process.env.REBUGIT_ENV
         this.namespace = 'httpIntegration'
+        this._http = null
+        this._https = null
     }
 
     public init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {

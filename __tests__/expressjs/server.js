@@ -1,3 +1,5 @@
+import {CustomIntegration} from "../../src/integrations/customIntegration";
+
 const http = require("http");
 const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
@@ -9,13 +11,31 @@ const express = require('express')
 const app = express()
 const port = 9000
 
+function myCustomIntegrationCallback(env, close, getData, wrap) {
+    wrap(module, 'name', function (original) {
+        // integration logic
+        if (env === 'debug'){
+            // inject logic
+        }
+
+        // extract logic
+    })
+
+    return {
+        module: cors,
+        name: 'cors'
+    }
+}
+
 const Rebugit = new RebugitSDK({
     apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmNjEyNTcwZi04MzU0LTQ2MGQtOWJhZi00MzYwNmZlNWFlOTQiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ZAIk8rh9QX9Pz5tH843hn-uhIkvdxvwt1x1BQuJwKpE',
+    customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
 })
 
 Sentry.init({
     dsn: "https://9cd1dff7aff84daeb2bdf110e9aa8d80@o260622.ingest.sentry.io/5636379",
 });
+
 
 const sequelize = new Sequelize('postgres://postgres:postgres@localhost:5433/postgres') // Example for postgres
 const getDataFromDatabase = async () => {

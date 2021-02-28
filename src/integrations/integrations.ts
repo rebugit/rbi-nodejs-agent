@@ -1,4 +1,11 @@
-class Integrations {
+export class Integrations {
+    protected env: any;
+
+    constructor() {
+        this.env = process.env.REBUGIT_ENV
+    }
+
+
     private static isModulePresent(moduleName): string | undefined {
         try {
             return require.resolve(moduleName)
@@ -7,14 +14,10 @@ class Integrations {
         }
     }
 
-    public require(moduleName): any | undefined {
+    protected require(moduleName): any | undefined {
         const module = Integrations.isModulePresent(moduleName);
         if (module) {
             return require(module)
         }
     }
-}
-
-module.exports = {
-    Integrations
 }

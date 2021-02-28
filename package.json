@@ -7,9 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "reproduce",
+    "nodejs"
+  ],
+  "author": "Matteo Gioioso",
+  "license": "MIT",
   "dependencies": {
     "flatted": "^3.1.1",
     "shimmer": "^1.2.1",
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^14.14.31",
+    "@types/shimmer": "^1.0.1",
     "jest": "^26.6.3",
     "typescript": "^4.2.2"
   }

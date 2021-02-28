@@ -2,6 +2,8 @@ import {IIntegration} from "./integrations";
 import {TraceServiceApi} from "./trace/Api";
 import {TracesLoader} from "./trace/TracesLoader";
 import {IGlobalConfig} from "./config";
+import {CustomIntegration} from "./integrations/customIntegration";
+
 const integrations = require('./integrations')
 const {ErrorDomain} = require("./trace/ErrorDomain");
 const {ExpressIntegration} = require("./integrations/expressIntegration");
@@ -34,6 +36,15 @@ class RebugitSDK {
                 this.integrations.set(key, instance)
                 logger.info(`wrap ${key} integration`)
             }
+        }
+
+        const customIntegrations = this.config.customIntegrations || {}
+
+        for (const key of Object.keys(customIntegrations)) {
+            const instance: IIntegration = new CustomIntegration(customIntegrations[key])
+            instance.init(tracer, this.tracesLoader, {})
+            this.integrations.set(key, instance)
+            logger.info(`wrap ${key} integration`)
         }
     }
 

@@ -2,7 +2,7 @@ export interface ITrace {
     traceId?: string
     correlationId: string
     data: string
-    operationType: string
+    operationType?: string
 }
 
 export class Trace {
