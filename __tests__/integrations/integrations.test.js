@@ -1,4 +1,4 @@
-const {Integrations} = require("../../integrations/integrations");
+const {Integrations} = require("../../src/integrations/integrations");
 
 describe('Integration main class', function () {
     it('should correctly require a module', function () {
