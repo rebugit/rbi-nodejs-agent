@@ -4,7 +4,7 @@
   "description": "",
   "main": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest __tests__/",
     "build": "tsc"
   },
   "keywords": [
@@ -22,9 +22,23 @@
     "node": ">=13.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^26.0.20",
     "@types/node": "^14.14.31",
     "@types/shimmer": "^1.0.1",
+    "husky": "^4.0.0",
     "jest": "^26.6.3",
+    "ts-jest": "^26.5.2",
     "typescript": "^4.2.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run test"
+    }
+  },
+  "jest": {
+    "modulePathIgnorePatterns": [
+      "__tests__/expressjs"
+    ],
+    "preset": "ts-jest"
   }
 }
