@@ -1,13 +1,27 @@
+import {IIntegrationConfig} from "../config";
+import {Tracer} from "../trace/Tracer";
+import {TracesLoader} from "../trace/TracesLoader";
+import {IIntegration} from "./index";
+
 const shimmer = require("shimmer");
 const {Integrations} = require("./integrations");
 
-class PostgresIntegration extends Integrations {
-    constructor(tracer, tracesLoader, config) {
+class PostgresIntegration extends Integrations implements IIntegration {
+    private tracer: Tracer;
+    private tracesLoader: TracesLoader;
+    private env: string;
+    private config: IIntegrationConfig;
+
+    constructor() {
         super()
+
+        this.env = process.env.REBUGIT_ENV
+    }
+
+    init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
         this.tracer = tracer
         this.tracesLoader = tracesLoader
-        this.REBUGIT_ENV = process.env.REBUGIT_ENV
-        this.config = config
+        this.config = config || {}
 
         const pg = this.require("pg");
         if (pg) {
@@ -20,11 +34,12 @@ class PostgresIntegration extends Integrations {
      * Example pg library wrapper, this works for Sequelize as well
      * @returns {function(*): function(*=, *=): Promise<undefined|*>}
      */
-    wrap() {
+    private wrap() {
         return function (request) {
             return async function requestWrapper(options, callback) {
                 try {
                     const req = await request.call(this, options);
+                    // @ts-ignore
                     console.log(arguments)
                     if (callback) {
                         callback(null, req)
@@ -40,7 +55,7 @@ class PostgresIntegration extends Integrations {
     }
 
     end() {
-        if (this._pg){
+        if (this._pg) {
             shimmer.unwrap(this._pg.Client.prototype, 'query')
         }
     }

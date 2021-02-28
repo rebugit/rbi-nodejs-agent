@@ -1,5 +1,5 @@
 class Integrations {
-    isModulePresent(moduleName){
+    private static isModulePresent(moduleName): string | undefined {
         try {
             return require.resolve(moduleName)
         } catch (e) {
@@ -7,9 +7,9 @@ class Integrations {
         }
     }
 
-    require(moduleName){
-        const module = this.isModulePresent(moduleName);
-        if (module){
+    public require(moduleName): any | undefined {
+        const module = Integrations.isModulePresent(moduleName);
+        if (module) {
             return require(module)
         }
     }

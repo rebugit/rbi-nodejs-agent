@@ -3,14 +3,14 @@ const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
 const cors = require('cors')
 // This package must be imported even if there are no methods to require
-const {RebugitSDK} = require('../../src');
+const {RebugitSDK} = require('../../dist');
 const bodyParser = require('body-parser')
 const express = require('express')
 const app = express()
 const port = 9000
 
 const Rebugit = new RebugitSDK({
-    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmNjEyNTcwZi04MzU0LTQ2MGQtOWJhZi00MzYwNmZlNWFlOTQiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ZAIk8rh9QX9Pz5tH843hn-uhIkvdxvwt1x1BQuJwKpE'
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmNjEyNTcwZi04MzU0LTQ2MGQtOWJhZi00MzYwNmZlNWFlOTQiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ZAIk8rh9QX9Pz5tH843hn-uhIkvdxvwt1x1BQuJwKpE',
 })
 
 Sentry.init({

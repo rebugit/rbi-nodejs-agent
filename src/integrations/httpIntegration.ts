@@ -1,28 +1,40 @@
+import {Tracer} from "../trace/Tracer";
+import {TracesLoader} from "../trace/TracesLoader";
+import {IIntegrationConfig} from "../config";
+import {IIntegration} from "./index";
+
+const url = require("url");
 const events = require("events");
 const shimmer = require("shimmer");
 const {Integrations} = require("./integrations");
 const {stringify} = require('flatted');
-const {Span} = require('../trace/Span')
+const {Trace} = require('../trace/Trace')
 const logger = require('../logger')
 
-/**
- * @typedef {{extraFields: string[]}} Config
- */
+interface IHttpTraceData {
+    body: any
+    headers: { [key: string]: string },
+    statusCode: number,
+    statusMessage: string
+}
 
-class HttpIntegration extends Integrations {
-    /**
-     *
-     * @param tracer
-     * @param tracesLoader
-     * @param {Config} config
-     */
-    constructor(tracer, tracesLoader, config) {
+export class HttpIntegration extends Integrations implements IIntegration {
+    private tracer: Tracer;
+    private tracesLoader: TracesLoader;
+    private readonly env: string;
+    private config: IIntegrationConfig;
+    private readonly namespace: string;
+
+    constructor() {
         super()
+        this.env = process.env.REBUGIT_ENV
+        this.namespace = 'httpIntegration'
+    }
+
+    public init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
         this.tracer = tracer
         this.tracesLoader = tracesLoader
-        this.env = process.env.REBUGIT_ENV
-        this.config = config
-        this.namespace = 'httpIntegration'
+        this.config = config || {}
 
         const http = this.require("http");
         if (http) {
@@ -37,11 +49,11 @@ class HttpIntegration extends Integrations {
         }
     }
 
-    getCorrelationId = (method, host, path) => {
+    private getCorrelationId = (method, host, path): string => {
         return `${method}_${host}_${path}`
     }
 
-    setExtraFields(res, data) {
+    private setExtraFields(res, data) {
         if (this.config.extraFields) {
             this.config.extraFields.forEach(field => {
                 data[field] = res[field]
@@ -49,7 +61,7 @@ class HttpIntegration extends Integrations {
         }
     }
 
-    wrap() {
+    private wrap() {
         return (request) => {
             return (options, callback) => {
                 const method = (options.method || 'GET').toUpperCase();
@@ -60,7 +72,7 @@ class HttpIntegration extends Integrations {
 
                 try {
                     if (this.env === 'debug') {
-                        const data = this.tracesLoader.get(correlationId);
+                        const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
                         logger.info(`trace loaded: ${data}`, this.namespace)
                         const wrappedCallback = (res) => {
                             const customRes = new events.EventEmitter()
@@ -101,8 +113,8 @@ class HttpIntegration extends Integrations {
                                     correlationId,
                                 }
 
-                                const span = new Span(obj);
-                                this.tracer.addSpan(span.span())
+                                const trace = new Trace(obj);
+                                this.tracer.add(trace.trace())
                             });
 
                             callback(res)
@@ -118,7 +130,7 @@ class HttpIntegration extends Integrations {
         }
     }
 
-    end() {
+    end(): void {
         if (this._http) {
             shimmer.unwrap(this._http, 'request');
         }

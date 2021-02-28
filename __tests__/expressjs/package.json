@@ -4,8 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "REBUGIT_DEBUG=ALL NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=production nodemon server.js"
+    "start": "(cd ../../ && npm run build) && REBUGIT_DEBUG=ALL NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=production nodemon server.js"
   },
   "keywords": [],
   "author": "",

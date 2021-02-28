@@ -1,7 +1,23 @@
+import {RequestOptions} from "https";
+import {ITrace} from "./Trace";
+import {IErrorDomain} from "./ErrorDomain";
+
 const https = require('https')
 const logger = require('../logger')
 
-class TraceServiceApi {
+interface IApiResponse<T> {
+    data: T
+}
+
+interface IData {
+    traces: ITrace[]
+    error: IErrorDomain
+}
+
+export class TraceServiceApi {
+    private readonly host: string;
+    private readonly token: string;
+    private readonly apiKey: string;
     constructor({apiKey}) {
         const host = 'localhost' // TODO: substitute with live application host
         this.host = process.env.REBUGIT_BASE_URL || host
@@ -9,7 +25,7 @@ class TraceServiceApi {
         this.apiKey = process.env.REBUGIT_API_KEY || apiKey
     }
 
-    async createError(tracer, error) {
+    async createError(tracer, error): Promise<void> {
         try {
             const data = {
                 traces: tracer.spans(),
@@ -24,13 +40,13 @@ class TraceServiceApi {
         }
     }
 
-    async findByTraceId(traceId = process.env.REBUGIT_TRACE_ID) {
+    async findByTraceId(traceId = process.env.REBUGIT_TRACE_ID): Promise<ITrace[]> {
         const resp = await this._get(`/traces/${traceId}`)
         return resp.data
     }
 
-    async _post(path, data) {
-        const options = {
+    async _post(path: string, data: IData): Promise<IApiResponse<string>> {
+        const options: RequestOptions = {
             hostname: this.host,
             port: 443,
             path,
@@ -44,8 +60,8 @@ class TraceServiceApi {
         return this._request(options, data)
     }
 
-    async _get(path) {
-        const options = {
+    async _get(path: string): Promise<IApiResponse<ITrace[]>> {
+        const options: RequestOptions = {
             hostname: this.host,
             port: 443,
             path,
@@ -60,7 +76,7 @@ class TraceServiceApi {
         return this._request(options)
     }
 
-    async _request(options, data) {
+    private async _request<T>(options: RequestOptions, data?: IData): Promise<T> {
         return new Promise((resolve, reject) => {
             const req = https.request(options, res => {
                 res.setEncoding('utf8');
@@ -75,12 +91,14 @@ class TraceServiceApi {
                 });
 
                 res.on('end', function () {
+                    let parsedBody: T
                     try {
-                        body = JSON.parse(body);
+                        // @ts-ignore
+                        parsedBody = JSON.parse(body);
                     } catch (e) {
                         reject(e);
                     }
-                    resolve(body);
+                    resolve(parsedBody);
                 });
             })
 
