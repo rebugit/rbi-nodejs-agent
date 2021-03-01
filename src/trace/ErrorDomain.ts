@@ -4,7 +4,7 @@ export interface IErrorDomain {
     stackTrace: string
 }
 
-class ErrorDomain {
+export class ErrorDomain {
     private readonly traceId: string;
     private readonly message: string;
     private readonly stack: string;
@@ -22,8 +22,4 @@ class ErrorDomain {
             stackTrace: this.stack
         }
     }
-}
-
-module.exports = {
-    ErrorDomain
 }

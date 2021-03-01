@@ -3,6 +3,7 @@ import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegrationConfig} from "../config";
 import {IIntegration} from "./index";
 import {Integrations} from "./integrations";
+import {IncomingHttpHeaders, IncomingMessage, RequestOptions} from "http";
 
 const url = require("url");
 const events = require("events");
@@ -13,7 +14,7 @@ const logger = require('../logger')
 
 interface IHttpTraceData {
     body: any
-    headers: { [key: string]: string },
+    headers: IncomingHttpHeaders,
     statusCode: number,
     statusMessage: string
 }
@@ -51,11 +52,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private getCorrelationId = (method, host, path): string => {
-        return `${method}_${host}_${path}`
-    }
-
-    private setExtraFields(res, data) {
+    private getExtraFieldsFromRes(res: IncomingMessage, data: IHttpTraceData) {
         if (this.config.extraFields) {
             this.config.extraFields.forEach(field => {
                 data[field] = res[field]
@@ -63,12 +60,21 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
+    private addExtraFieldsToRes(res: IncomingMessage, data: IHttpTraceData){
+        if (this.config.extraFields) {
+            this.config.extraFields.forEach(field => {
+                res[field] = data[field]
+            })
+        }
+    }
+
     private wrap() {
         return (request) => {
-            return (options, callback) => {
+            return (options: RequestOptions, callback) => {
                 const method = (options.method || 'GET').toUpperCase();
                 options = typeof options === 'string' ? url.parse(options) : options;
                 const host = options.hostname || options.host || 'localhost';
+                // @ts-ignore
                 let path = options.path || options.pathname || '/';
                 const correlationId = this.getCorrelationId(method, host, path);
 
@@ -76,9 +82,10 @@ export class HttpIntegration extends Integrations implements IIntegration {
                     if (this.env === 'debug') {
                         const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
                         logger.info(`trace loaded: ${data}`, this.namespace)
-                        const wrappedCallback = (res) => {
-                            const customRes = new events.EventEmitter()
+                        const wrappedCallback = (res: IncomingMessage) => {
+                            const customRes: IncomingMessage = new events.EventEmitter()
                             customRes.setEncoding = function () {
+                                return customRes
                             }
 
                             process.nextTick(() => {
@@ -86,13 +93,16 @@ export class HttpIntegration extends Integrations implements IIntegration {
                                 customRes.emit('end')
                             })
 
-                            customRes.statusCode = 200
+                            customRes.statusCode = data.statusCode
+                            customRes.headers = data.headers
+                            customRes.statusMessage = data.statusMessage
+                            this.addExtraFieldsToRes(customRes, data)
                             callback(customRes)
                         };
 
                         return request.call(this, options, wrappedCallback);
                     } else {
-                        const wrappedCallback = (res) => {
+                        const wrappedCallback = (res: IncomingMessage) => {
                             res.setEncoding('utf8');
                             let output = '';
 
@@ -101,14 +111,14 @@ export class HttpIntegration extends Integrations implements IIntegration {
                             });
 
                             res.on('end', () => {
-                                const data = {
+                                const data: IHttpTraceData = {
                                     body: output,
                                     headers: res.headers,
-                                    statusCode: res.statusMessage,
+                                    statusCode: res.statusCode,
                                     statusMessage: res.statusMessage
                                 }
 
-                                this.setExtraFields(res, data)
+                                this.getExtraFieldsFromRes(res, data)
 
                                 const obj = {
                                     data: stringify(data),

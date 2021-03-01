@@ -1,6 +1,7 @@
 import {RequestOptions} from "https";
 import {ITrace} from "./Trace";
-import {IErrorDomain} from "./ErrorDomain";
+import {ErrorDomain, IErrorDomain} from "./ErrorDomain";
+import {Tracer} from "./Tracer";
 
 const https = require('https')
 const logger = require('../logger')
@@ -31,10 +32,10 @@ export class TraceServiceApi implements ITraceServiceApi {
         this.apiKey = process.env.REBUGIT_API_KEY || apiKey
     }
 
-    async createError(tracer, error): Promise<void> {
+    async createError(tracer: Tracer, error: ErrorDomain): Promise<void> {
         try {
             const data = {
-                traces: tracer.spans(),
+                traces: tracer.traces,
                 error: error.getError()
             }
 

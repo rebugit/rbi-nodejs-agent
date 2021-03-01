@@ -1,4 +1,4 @@
-import {CustomIntegration, customIntegrationCallback} from "../integrations/customIntegration";
+import {customIntegrationCallback} from "../integrations/customIntegration";
 
 export interface IIntegrationConfig {
     extraFields?: string[]

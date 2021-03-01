@@ -1,11 +1,10 @@
-import {CustomIntegration} from "../../src/integrations/customIntegration";
-
 const http = require("http");
 const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
 const cors = require('cors')
 // This package must be imported even if there are no methods to require
-const {RebugitSDK} = require('../../dist');
+const {RebugitSDK} = require('rbi-nodejs-agent');
+const {Client} = require('pg')
 const bodyParser = require('body-parser')
 const express = require('express')
 const app = express()
@@ -29,7 +28,7 @@ function myCustomIntegrationCallback(env, close, getData, wrap) {
 
 const Rebugit = new RebugitSDK({
     apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmNjEyNTcwZi04MzU0LTQ2MGQtOWJhZi00MzYwNmZlNWFlOTQiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ZAIk8rh9QX9Pz5tH843hn-uhIkvdxvwt1x1BQuJwKpE',
-    customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
+    // customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
 })
 
 Sentry.init({
@@ -37,11 +36,29 @@ Sentry.init({
 });
 
 
+const isSequelize = true
+const pg = new Client({
+    user: 'postgres',
+    database: 'postgres',
+    host: 'localhost',
+    password: 'postgres',
+    port: 5433
+})
 const sequelize = new Sequelize('postgres://postgres:postgres@localhost:5433/postgres') // Example for postgres
 const getDataFromDatabase = async () => {
-    const res = await sequelize.query('SELECT 1 + 5 * 3 AS result')
-    console.log("Outside wrapper", res)
-    return res[0][0].result
+    if (isSequelize){
+        const res = await sequelize.query('SELECT 1 + 5 * :multi AS result', {
+            replacements: {
+                'multi': 4
+            }
+        })
+        return res[0][0].result
+    }
+
+    await pg.connect()
+    const res = await pg.query('SELECT 1 + 5 * $1 AS result', [4])
+
+    return res.rows[0].result
 }
 
 const callExternalAPI = async () => {
@@ -78,19 +95,15 @@ const callExternalAPI = async () => {
     })
 }
 
-app.use(cors())
-app.use(bodyParser.json())
-app.use(Sentry.Handlers.requestHandler());
-app.use(Rebugit.Handlers().requestHandler())
-app.post('/', async (req, res, next) => {
+const doStuff = async (req, res, next) => {
     const {num} = req.body
     console.log("Received number: ", num)
 
     const data = await callExternalAPI();
     console.log(data)
 
-    // const moreData = await getDataFromDatabase()
-    // console.log(moreData)
+    const moreData = await getDataFromDatabase()
+    console.log('From db', moreData)
 
     console.log("Title: ", data.title)
 
@@ -106,7 +119,14 @@ app.post('/', async (req, res, next) => {
     res.status(200).send({
         magicNumber
     })
-})
+}
+
+app.use(cors())
+app.use(bodyParser.json())
+app.use(Sentry.Handlers.requestHandler());
+app.use(Rebugit.Handlers().requestHandler())
+app.post('/', doStuff)
+app.post('/send', doStuff)
 
 app.use(Rebugit.Handlers().errorHandler({Sentry}))
 app.use(Sentry.Handlers.errorHandler());

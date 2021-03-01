@@ -3,11 +3,11 @@ import {TraceServiceApi} from "./trace/Api";
 import {TracesLoader} from "./trace/TracesLoader";
 import {IGlobalConfig} from "./config";
 import {CustomIntegration} from "./integrations/customIntegration";
+import {Tracer} from "./trace/Tracer";
 
 const integrations = require('./integrations')
 const {ErrorDomain} = require("./trace/ErrorDomain");
-const {ExpressIntegration} = require("./integrations/expressIntegration");
-const {Tracer} = require("./trace/Tracer");
+const {HttpHandlerIntegration} = require("./integrations/httpHandlerIntegration");
 const logger = require('./logger')
 
 class RebugitSDK {
@@ -16,6 +16,7 @@ class RebugitSDK {
     private readonly tracesLoader: TracesLoader;
     private integrations: Map<string, IIntegration>;
     private readonly env: string;
+    private tracer: Tracer;
 
     constructor(config: IGlobalConfig) {
         this.config = config
@@ -64,7 +65,8 @@ class RebugitSDK {
              */
             requestHandler: (config) => async (req, res, next) => {
                 const tracer = new Tracer()
-                const expressIntegration = new ExpressIntegration()
+                this.tracer = tracer
+                const handlerIntegration = new HttpHandlerIntegration()
 
                 logger.info(`init handler with traceId: ${tracer.traceId}`)
 
@@ -78,9 +80,9 @@ class RebugitSDK {
                     const traces = await this.api.findByTraceId()
                     this.tracesLoader.load(traces)
                     logger.info(`traces loaded in memory`)
-                    const correlationId = expressIntegration.getCorrelationId(req)
+                    const correlationId = handlerIntegration.getCorrelationId(req)
                     const span = this.tracesLoader.get(correlationId);
-                    expressIntegration.injectSpanToRequest(req, span)
+                    handlerIntegration.injectTraceToRequest(req, span)
                     logger.info(`handler trace injected into request object`)
 
                     this._initIntegrations(tracer)
@@ -89,9 +91,8 @@ class RebugitSDK {
                 } else {
 
                     this._initIntegrations(tracer)
-                    const span = expressIntegration.getTrace(tracer.traceId, req);
+                    const span = handlerIntegration.getTrace(tracer.traceId, req);
                     tracer.add(span)
-                    res.locals['rebugit-context'] = {tracer};
                     next()
                 }
             },
@@ -103,21 +104,21 @@ class RebugitSDK {
                     return next(err)
                 }
 
-                const rebugitContext = res.locals['rebugit-context'];
-
                 if (Sentry) {
-                    Sentry.setTag("rebugit-traceId", rebugitContext.tracer.traceId);
+                    Sentry.setTag("rebugit-traceId", this.tracer.traceId);
                 }
 
-                delete res.locals['rebugit-context']
-                logger.info(`traceId from context: ${rebugitContext.tracer.traceId}`)
-
-                const errorDomain = new ErrorDomain(rebugitContext.tracer.traceId, err);
-
-                this.api.createError(rebugitContext.tracer, errorDomain).then()
+                const errorDomain = new ErrorDomain(this.tracer.traceId, err);
+                this.api.createError(this.tracer, errorDomain).then()
+                logger.info(`Ending trace with traceId: ${this.tracer.traceId}`)
+                this.clean()
                 next(err)
             }
         }
+    }
+
+    private clean(){
+        this.tracer = null
     }
 }
 

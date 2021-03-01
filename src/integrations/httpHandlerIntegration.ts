@@ -1,6 +1,6 @@
 const {stringify} = require('flatted');
 
-export class ExpressIntegration {
+export class HttpHandlerIntegration {
     getCorrelationId(req) {
         return `${req.method}_${req.originalUrl}`
     }
@@ -18,7 +18,7 @@ export class ExpressIntegration {
         }
     }
 
-    injectSpanToRequest(req, spanData) {
+    injectTraceToRequest(req, spanData) {
         Object.keys(spanData).forEach(key => {
             req[key] = spanData[key]
         })

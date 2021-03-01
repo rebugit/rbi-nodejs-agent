@@ -1,8 +1,8 @@
 {
-  "name": "js",
+  "name": "rbi-nodejs-agent",
   "version": "1.0.0",
   "description": "",
-  "main": "",
+  "main": "dist/index.js",
   "scripts": {
     "test": "jest __tests__/",
     "build": "tsc"
@@ -24,6 +24,7 @@
   "devDependencies": {
     "@types/jest": "^26.0.20",
     "@types/node": "^14.14.31",
+    "@types/pg": "^7.14.10",
     "@types/shimmer": "^1.0.1",
     "husky": "^4.0.0",
     "jest": "^26.6.3",
@@ -37,7 +38,8 @@
   },
   "jest": {
     "modulePathIgnorePatterns": [
-      "__tests__/expressjs"
+      "__tests__/expressjs",
+      "__tests__/nestjs"
     ],
     "preset": "ts-jest"
   }
