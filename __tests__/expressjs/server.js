@@ -28,7 +28,7 @@ function myCustomIntegrationCallback(env, close, getData, wrap) {
 }
 
 const Rebugit = new RebugitSDK({
-    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI4MGE5OTMyZS1hNTZjLTQ4ZDEtOTU4Mi02M2FiZmY1NzJiMWYiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.W6NFoLtJuofABeu8O6xEPEqBaK8OhMs0xTezYqSZZuQ',
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmZDNlOWFkZS0zZjM0LTQzNTQtYTIyMS0zNDJhMWU2NmQ5ZDMiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ax1Iehf3QGne9p3oaloH01kwGdSvoJ0mAnCcPc1qyjA',
     // customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
 })
 

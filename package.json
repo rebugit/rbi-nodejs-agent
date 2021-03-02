@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "test": "jest __tests__/",
+    "test": "jest --passWithNoTests __tests__/ && npm run build && npm link && (cd __tests__/integrations && ./run.sh)",
     "build": "tsc"
   },
   "keywords": [
@@ -40,7 +40,7 @@
     "modulePathIgnorePatterns": [
       "__tests__/expressjs",
       "__tests__/nestjs",
-      "__tests__/integrations/utils"
+      "__tests__/integrations"
     ],
     "preset": "ts-jest"
   }

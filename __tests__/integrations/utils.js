@@ -1,7 +1,8 @@
-import http from "http";
-import request from 'request'
+const http = require("http");
+const https = require("https");
+const request = require('request')
 
-export const requestWithHttp = () => new Promise((resolve, reject) => {
+const requestWithHttp = (isHttps) => new Promise((resolve, reject) => {
     const options = {
         host: 'jsonplaceholder.typicode.com',
         path: '/todos/1',
@@ -11,7 +12,15 @@ export const requestWithHttp = () => new Promise((resolve, reject) => {
         }
     };
 
-    const req = http.request(options, (res) => {
+    let client;
+
+    if (isHttps){
+        client = https
+    } else {
+        client = http
+    }
+
+    const req = client.request(options, (res) => {
         console.log(`${options.host} : ${res.statusCode}`);
         res.setEncoding('utf8');
         let output = '';
@@ -34,8 +43,8 @@ export const requestWithHttp = () => new Promise((resolve, reject) => {
     req.end();
 })
 
-export const requestWithRequest = () => new Promise((resolve, reject) => {
-    request('http://jsonplaceholder.typicode.com', function (error, response, body) {
+const requestWithRequest = () => new Promise((resolve, reject) => {
+    request('http://jsonplaceholder.typicode.com/todos/1', function (error, response, body) {
         if (error){
             return reject(error)
         }
@@ -43,10 +52,16 @@ export const requestWithRequest = () => new Promise((resolve, reject) => {
     });
 })
 
-export const clearEnvironmentVariables = () => {
+const clearEnvironmentVariables = () => {
     for (const key of Object.keys(process.env)) {
         if (key.toUpperCase().startsWith('REBUGIT_')) {
             delete process.env[key];
         }
     }
 };
+
+module.exports = {
+    requestWithRequest,
+    requestWithHttp,
+    clearEnvironmentVariables,
+}
