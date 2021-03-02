@@ -2,6 +2,9 @@ import {IIntegrationConfig} from "../config";
 import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegration} from "./index";
+import {QueryResult} from "pg";
+import {stringify} from "flatted";
+import {Trace} from "../trace/Trace";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -20,6 +23,8 @@ export class PostgresIntegration extends Integrations implements IIntegration {
 
         this.env = process.env.REBUGIT_ENV
         this.namespace = 'pgIntegration'
+
+        this.handleResponse = this.handleResponse.bind(this);
     }
 
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -44,9 +49,9 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             return function (...args): any {
                 try {
                     const newArgs = [...args];
-                    console.log("ARGS", newArgs)
                     const statement = integration.getStatement(newArgs);
-                    console.log("STATEMENT: ", statement)
+                    const correlationId = integration.hashSha1(statement);
+
                     let originalCallback: any;
                     let callbackIndex = -1;
 
@@ -59,19 +64,18 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                     }
 
                     if (callbackIndex >= 0) {
-                        const wrappedCallback = (err: any, res: any) => {
-                            console.log("CALLBACK: ", err, res)
-                            originalCallback(err, res)
+                        // Inject callback
+                        newArgs[callbackIndex] = (err: any, value: QueryResult) => {
+                            const queryResult = integration.handleResponse(value, correlationId);
+                            originalCallback(err, queryResult)
                         };
-                        newArgs[callbackIndex] = wrappedCallback;
                     }
 
                     const result = query.apply(this, newArgs);
-                    console.log("FUNCTION", result)
+
                     if (result && typeof result.then === 'function') {
-                        result.then(function (value: any) {
-                            console.log("VALUE: ", value)
-                            return value;
+                        result.then(function (value: QueryResult) {
+                            return integration.handleResponse(value, correlationId)
                         }).catch(function (error: any) {
                             console.log("ERROR: ", error)
                             return error;
@@ -88,6 +92,35 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         }
     }
 
+    private handleResponse(value: QueryResult, correlationId: string): QueryResult {
+        if (this.env === 'debug') {
+
+
+            return value
+
+        } else {
+            const data = {
+                value: value.rows
+            }
+
+            this.getExtraFieldsFromRes(value, data)
+
+            const trace = new Trace({
+                operationType: 'QUERY',
+                correlationId,
+                data: stringify(data)
+            })
+
+            this.tracer.add(trace.trace())
+
+            return value;
+        }
+    }
+
+    /**
+     * Depending who is calling the query method the statement argument
+     * may appears in different order
+     */
     private getStatement(args: any[]) {
         let text;
         let values;
@@ -111,11 +144,31 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         return text;
     }
 
+    /**
+     * Replace all query parameters
+     * Ex: SELECT 1 + $1 AS result, [4] => SELECT 1 + 5 AS result
+     */
     private replaceArgs(statement: string, values: any[]): string {
         const args = Array.prototype.slice.call(values);
         const replacer = (value: string) => args[parseInt(value.substr(1), 10) - 1];
 
         return statement.replace(/(\$\d+)/gm, replacer);
+    }
+
+    private getExtraFieldsFromRes(res: QueryResult, data: any) {
+        if (this.config.extraFields) {
+            this.config.extraFields.forEach(field => {
+                data[field] = res[field]
+            })
+        }
+    }
+
+    private addExtraFieldsToRes(res: QueryResult, data: any) {
+        if (this.config.extraFields) {
+            this.config.extraFields.forEach(field => {
+                res[field] = data[field]
+            })
+        }
     }
 
     end() {

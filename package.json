@@ -39,7 +39,8 @@
   "jest": {
     "modulePathIgnorePatterns": [
       "__tests__/expressjs",
-      "__tests__/nestjs"
+      "__tests__/nestjs",
+      "__tests__/integrations/utils"
     ],
     "preset": "ts-jest"
   }

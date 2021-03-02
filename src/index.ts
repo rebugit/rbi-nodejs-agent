@@ -45,14 +45,12 @@ class RebugitSDK {
             const instance: IIntegration = new CustomIntegration(customIntegrations[key])
             instance.init(tracer, this.tracesLoader, {})
             this.integrations.set(key, instance)
-            logger.info(`wrap ${key} integration`)
         }
     }
 
     _endIntegrations() {
-        for (const [key, instance] of this.integrations.entries()) {
+        for (const [_, instance] of this.integrations.entries()) {
             instance.end()
-            logger.info(`unwrap ${key} integration`)
         }
     }
 

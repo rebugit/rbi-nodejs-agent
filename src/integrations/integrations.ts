@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 export class Integrations {
     protected env: any;
     private _counter: number;
@@ -25,5 +27,11 @@ export class Integrations {
     protected getCorrelationId = (method: string, host: string, path: string): string => {
         this._counter++
         return `${method}_${host}_${path}_${this._counter}`
+    }
+
+    protected hashSha1 = (value: string): string => {
+        const hash = crypto.createHash('sha1')
+        hash.update(value)
+        return hash.digest('hex')
     }
 }

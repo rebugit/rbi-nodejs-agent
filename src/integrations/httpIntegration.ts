@@ -4,6 +4,7 @@ import {IIntegrationConfig} from "../config";
 import {IIntegration} from "./index";
 import {Integrations} from "./integrations";
 import {IncomingHttpHeaders, IncomingMessage, RequestOptions} from "http";
+import {HttpMock} from "./mocks/http";
 
 const url = require("url");
 const events = require("events");
@@ -43,12 +44,14 @@ export class HttpIntegration extends Integrations implements IIntegration {
         if (http) {
             this._http = http
             shimmer.wrap(http, 'request', this.wrap());
+            logger.info(`wrap http integration`, this.namespace)
         }
 
         const https = this.require("https");
         if (https) {
             this._https = https
             shimmer.wrap(https, 'request', this.wrap());
+            logger.info(`wrap https integration`, this.namespace)
         }
     }
 
@@ -60,7 +63,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private addExtraFieldsToRes(res: IncomingMessage, data: IHttpTraceData){
+    private addExtraFieldsToRes(res: IncomingMessage, data: IHttpTraceData) {
         if (this.config.extraFields) {
             this.config.extraFields.forEach(field => {
                 res[field] = data[field]
@@ -69,6 +72,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
     }
 
     private wrap() {
+        const integration = this
         return (request) => {
             return (options: RequestOptions, callback) => {
                 const method = (options.method || 'GET').toUpperCase();
@@ -79,31 +83,36 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 const correlationId = this.getCorrelationId(method, host, path);
 
                 try {
-                    if (this.env === 'debug') {
+                    if (integration.env === 'debug') {
                         const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
+                        logger.info(`correlationId: ${correlationId}`, this.namespace)
                         logger.info(`trace loaded: ${data}`, this.namespace)
-                        const wrappedCallback = (res: IncomingMessage) => {
-                            const customRes: IncomingMessage = new events.EventEmitter()
-                            customRes.setEncoding = function () {
-                                return customRes
-                            }
+
+                        const httpMock = new HttpMock()
+
+                        const wrappedCallback = () => {
+                            const emitter = new events.EventEmitter()
+                            const resMock = httpMock.createResponseMock(emitter);
 
                             process.nextTick(() => {
-                                customRes.emit('data', data.body)
-                                customRes.emit('end')
+                                resMock.emit('data', data.body)
+                                resMock.emit('end')
                             })
 
-                            customRes.statusCode = data.statusCode
-                            customRes.headers = data.headers
-                            customRes.statusMessage = data.statusMessage
-                            this.addExtraFieldsToRes(customRes, data)
-                            callback(customRes)
+                            resMock.statusCode = data.statusCode
+                            resMock.headers = data.headers
+                            resMock.statusMessage = data.statusMessage
+                            this.addExtraFieldsToRes(resMock, data)
+
+                            // TODO: there is some error here:
+                            // Cannot read property 'aborted' of undefined TypeError: Cannot read property 'aborted' of undefined
+                            // however everything goes forward normally
+                            callback(resMock)
                         };
 
-                        return request.call(this, options, wrappedCallback);
+                        return httpMock.mockRequest(null, wrappedCallback)
                     } else {
                         const wrappedCallback = (res: IncomingMessage) => {
-                            res.setEncoding('utf8');
                             let output = '';
 
                             res.on('data', (chunk) => {
@@ -135,7 +144,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                         return request.call(this, options, wrappedCallback);
                     }
                 } catch (error) {
-                    logger.error(error, this.namespace)
+                    logger.error(error, integration.namespace)
                     return request.apply(this, [options, callback]);
                 }
             };
@@ -145,10 +154,12 @@ export class HttpIntegration extends Integrations implements IIntegration {
     end(): void {
         if (this._http) {
             shimmer.unwrap(this._http, 'request');
+            logger.info(`unwrap http integration`, this.namespace)
         }
 
         if (this._https) {
             shimmer.unwrap(this._https, 'request');
+            logger.info(`unwrap https integration`, this.namespace)
         }
     }
 }

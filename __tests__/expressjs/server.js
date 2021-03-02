@@ -4,7 +4,8 @@ const Sentry = require('@sentry/node')
 const cors = require('cors')
 // This package must be imported even if there are no methods to require
 const {RebugitSDK} = require('rbi-nodejs-agent');
-const {Client} = require('pg')
+const {Pool} = require('pg')
+const axios = require('axios')
 const bodyParser = require('body-parser')
 const express = require('express')
 const app = express()
@@ -27,7 +28,7 @@ function myCustomIntegrationCallback(env, close, getData, wrap) {
 }
 
 const Rebugit = new RebugitSDK({
-    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmNjEyNTcwZi04MzU0LTQ2MGQtOWJhZi00MzYwNmZlNWFlOTQiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ZAIk8rh9QX9Pz5tH843hn-uhIkvdxvwt1x1BQuJwKpE',
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiI4MGE5OTMyZS1hNTZjLTQ4ZDEtOTU4Mi02M2FiZmY1NzJiMWYiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.W6NFoLtJuofABeu8O6xEPEqBaK8OhMs0xTezYqSZZuQ',
     // customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
 })
 
@@ -36,8 +37,9 @@ Sentry.init({
 });
 
 
-const isSequelize = true
-const pg = new Client({
+const isSequelize = false
+const isAxios = true
+const pg = new Pool({
     user: 'postgres',
     database: 'postgres',
     host: 'localhost',
@@ -62,37 +64,43 @@ const getDataFromDatabase = async () => {
 }
 
 const callExternalAPI = async () => {
-    const options = {
-        host: 'jsonplaceholder.typicode.com',
-        path: '/todos/1',
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    };
+    if (isAxios){
+        const resp = await axios.get('http://jsonplaceholder.typicode.com/todos/1')
+        return resp.data
+    } else {
+        const options = {
+            host: 'jsonplaceholder.typicode.com',
+            path: '/todos/1',
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
 
-    return new Promise((resolve, reject) => {
-        const req = http.request(options, (res) => {
-            console.log(`${options.host} : ${res.statusCode}`);
-            res.setEncoding('utf8');
-            let output = '';
+        return new Promise((resolve, reject) => {
+            const req = http.request(options, (res) => {
+                console.log(`${options.host} : ${res.statusCode}`);
+                res.setEncoding('utf8');
+                let output = '';
 
-            res.on('data', (chunk) => {
-                output += chunk;
+                res.on('data', (chunk) => {
+                    output += chunk;
+                });
+
+                res.on('end', () => {
+                    let obj = JSON.parse(output);
+                    resolve(obj);
+                });
             });
 
-            res.on('end', () => {
-                let obj = JSON.parse(output);
-                resolve(obj);
+            req.on('error', (err) => {
+                console.log(err.message)
+                reject(err)
             });
-        });
 
-        req.on('error', (err) => {
-            reject(err)
-        });
-
-        req.end();
-    })
+            req.end();
+        })
+    }
 }
 
 const doStuff = async (req, res, next) => {
@@ -134,6 +142,7 @@ app.use(Sentry.Handlers.errorHandler());
 app.use(function onError(err, req, res, next) {
     // The error id is attached to `res.sentry` to be returned
     // and optionally displayed to the user for support.
+    console.log(err.message, err.stack)
     res.statusCode = 500;
     res.send(err.message)
 });
