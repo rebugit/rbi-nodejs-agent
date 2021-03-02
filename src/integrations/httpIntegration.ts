@@ -138,7 +138,9 @@ export class HttpIntegration extends Integrations implements IIntegration {
                                 this.tracer.add(trace.trace())
                             });
 
-                            callback(res)
+                            if (callback){
+                                callback(res)
+                            }
                         };
 
                         return request.call(this, options, wrappedCallback);

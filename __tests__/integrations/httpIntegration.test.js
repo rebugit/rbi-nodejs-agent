@@ -64,7 +64,7 @@ async function httpIntegrationProductionMode() {
 
     await httpIntegrationTestAxios()
     await httpIntegrationTestHttp()
-    // await httpIntegrationTestRequest()
+    await httpIntegrationTestRequest()
 }
 
 httpIntegrationProductionMode().then().catch(e => {

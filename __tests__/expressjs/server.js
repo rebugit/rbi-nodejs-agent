@@ -8,6 +8,7 @@ const {Pool} = require('pg')
 const axios = require('axios')
 const bodyParser = require('body-parser')
 const express = require('express')
+const request = require('request')
 const app = express()
 const port = 9000
 
@@ -63,10 +64,20 @@ const getDataFromDatabase = async () => {
     return res.rows[0].result
 }
 
+const requestWithRequest = () => new Promise((resolve, reject) => {
+    request('http://jsonplaceholder.typicode.com/todos/1', function (error, response, body) {
+        if (error){
+            return reject(error)
+        }
+        resolve(JSON.parse(body))
+    });
+})
+
 const callExternalAPI = async () => {
     if (isAxios){
-        const resp = await axios.get('http://jsonplaceholder.typicode.com/todos/1')
-        return resp.data
+        // const resp = await axios.get('http://jsonplaceholder.typicode.com/todos/1')
+        // return resp.data
+        return requestWithRequest()
     } else {
         const options = {
             host: 'jsonplaceholder.typicode.com',
@@ -108,7 +119,7 @@ const doStuff = async (req, res, next) => {
     console.log("Received number: ", num)
 
     const data = await callExternalAPI();
-    console.log(data)
+    console.log("external call: ", data)
 
     const moreData = await getDataFromDatabase()
     console.log('From db', moreData)
