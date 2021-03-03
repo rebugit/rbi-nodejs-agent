@@ -39,10 +39,6 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         }
     }
 
-    /**
-     * Example pg library wrapper, this works for Sequelize as well
-     * @returns {function(*): function(*=, *=): Promise<undefined|*>}
-     */
     private wrap() {
         const integration = this
         return function (query) {
@@ -108,7 +104,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             const trace = new Trace({
                 operationType: 'QUERY',
                 correlationId,
-                data: stringify(data)
+                data
             })
 
             this.tracer.add(trace.trace())

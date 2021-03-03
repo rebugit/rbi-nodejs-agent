@@ -33,12 +33,13 @@ async function productionMode() {
     async function pg() {
         const {tracer} = beforeEach('capture pg response correctly');
         const value = 4
-        await pgQuery(value)
+        const result = await pgQuery(value);
         const s = DB_QUERY.replace('$1', value);
         const hashedQuery = sha1(s);
 
         expect(tracer.traces.length).toBe(1)
         expect(tracer.traces[0].correlationId).toBe(hashedQuery)
+        expect(result).toBe(21)
 
         afterEach()
     }

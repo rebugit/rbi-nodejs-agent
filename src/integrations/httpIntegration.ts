@@ -129,7 +129,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                                 this.getExtraFieldsFromRes(res, data)
 
                                 const obj = {
-                                    data: stringify(data),
+                                    data,
                                     correlationId,
                                 }
 

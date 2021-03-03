@@ -2,6 +2,7 @@ import {customIntegrationCallback} from "../integrations/customIntegration";
 
 export interface IIntegrationConfig {
     extraFields?: string[]
+    blackListFields?: string[]
 }
 
 export interface  IGlobalConfig {

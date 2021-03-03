@@ -1,7 +1,9 @@
+import {stringify} from "flatted";
+
 export interface ITrace {
     traceId?: string
     correlationId: string
-    data: string
+    data: any
     operationType?: string
 }
 
@@ -19,7 +21,7 @@ export class Trace {
     trace(): ITrace {
         return {
             correlationId: this._correlationId,
-            data: this._data,
+            data: stringify(this._data),
             operationType: this._operationType
         }
     }
