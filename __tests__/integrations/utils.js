@@ -1,11 +1,21 @@
 const http = require("http");
 const https = require("https");
 const request = require('request')
+const axios = require("axios");
 
-const requestWithHttp = (isHttps) => new Promise((resolve, reject) => {
+const REQUEST_BASE_URL = 'jsonplaceholder.typicode.com'
+const PATH = 'todos/1'
+const RESPONSE_BODY = {
+    "completed": false,
+    "id": 1,
+    "title": "delectus aut autem",
+    "userId": 1,
+}
+
+const requestWithHttp = (isHttps = false) => new Promise((resolve, reject) => {
     const options = {
-        host: 'jsonplaceholder.typicode.com',
-        path: '/todos/1',
+        host: REQUEST_BASE_URL,
+        path: `/${PATH}`,
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -43,14 +53,32 @@ const requestWithHttp = (isHttps) => new Promise((resolve, reject) => {
     req.end();
 })
 
-const requestWithRequest = () => new Promise((resolve, reject) => {
-    request('http://jsonplaceholder.typicode.com/todos/1', function (error, response, body) {
+const requestWithRequest = (isHttps = false) => new Promise((resolve, reject) => {
+    let url;
+    if (isHttps){
+        url = `https://${REQUEST_BASE_URL}/${PATH}`
+    } else {
+        url = `http://${REQUEST_BASE_URL}/${PATH}`
+    }
+
+    request(url, function (error, response, body) {
         if (error){
             return reject(error)
         }
         resolve(body)
     });
 })
+
+const requestWithAxios = async (isHttps = false) => {
+    let url;
+    if (isHttps){
+        url = `https://${REQUEST_BASE_URL}/${PATH}`
+    } else {
+        url = `http://${REQUEST_BASE_URL}/${PATH}`
+    }
+
+    return axios.get(url)
+}
 
 const clearEnvironmentVariables = () => {
     for (const key of Object.keys(process.env)) {
@@ -64,4 +92,8 @@ module.exports = {
     requestWithRequest,
     requestWithHttp,
     clearEnvironmentVariables,
+    requestWithAxios,
+    REQUEST_BASE_URL,
+    PATH,
+    RESPONSE_BODY
 }

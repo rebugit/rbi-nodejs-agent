@@ -1,6 +1,6 @@
 import {ITrace} from "./Trace";
 
-const {parse, stringify} = require('flatted');
+const {parse} = require('flatted');
 
 export class TracesLoader {
     private readonly traces: {};

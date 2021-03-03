@@ -24,9 +24,9 @@ export class Integrations {
         }
     }
 
-    protected getCorrelationId = (method: string, host: string, path: string): string => {
+    protected getCorrelationId = (method: string, path: string): string => {
         this._counter++
-        return `${method}_${host}_${path}_${this._counter}`
+        return `${method}_${path}_${this._counter}`
     }
 
     protected hashSha1 = (value: string): string => {

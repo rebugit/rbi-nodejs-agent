@@ -77,10 +77,9 @@ export class HttpIntegration extends Integrations implements IIntegration {
             return (options: RequestOptions, callback) => {
                 const method = (options.method || 'GET').toUpperCase();
                 options = typeof options === 'string' ? url.parse(options) : options;
-                const host = options.hostname || options.host || 'localhost';
                 // @ts-ignore
                 let path = options.path || options.pathname || '/';
-                const correlationId = this.getCorrelationId(method, host, path);
+                const correlationId = this.getCorrelationId(method, path);
 
                 try {
                     if (integration.env === 'debug') {
