@@ -1,19 +1,22 @@
-const {parse, stringify} = require('flatted');
+import {ITrace} from "./Trace";
 
-class TracesLoader {
+const {parse} = require('flatted');
+
+export class TracesLoader {
+    private readonly traces: {};
+
     constructor() {
         this.traces = {}
     }
 
-    load(traces){
+    load(traces: ITrace[]): void {
         traces.forEach(trace => {
             this.traces[trace.correlationId] = trace
         })
     }
 
-    get(correlationId){
+    get<T>(correlationId: string): T {
         const trace = this.traces[correlationId]
-
         return parse(trace.data)
     }
 }

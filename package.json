@@ -1,14 +1,18 @@
 {
-  "name": "js",
+  "name": "rbi-nodejs-agent",
   "version": "1.0.0",
   "description": "",
-  "main": "",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --passWithNoTests __tests__/ && npm run build && npm link && (cd __tests__/integrations && ./run.sh)",
+    "build": "tsc"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "reproduce",
+    "nodejs"
+  ],
+  "author": "Matteo Gioioso",
+  "license": "MIT",
   "dependencies": {
     "flatted": "^3.1.1",
     "shimmer": "^1.2.1",
@@ -18,6 +22,26 @@
     "node": ">=13.0.0"
   },
   "devDependencies": {
-    "jest": "^26.6.3"
+    "@types/jest": "^26.0.20",
+    "@types/node": "^14.14.31",
+    "@types/pg": "^7.14.10",
+    "@types/shimmer": "^1.0.1",
+    "husky": "^4.0.0",
+    "jest": "^26.6.3",
+    "ts-jest": "^26.5.2",
+    "typescript": "^4.2.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run test"
+    }
+  },
+  "jest": {
+    "modulePathIgnorePatterns": [
+      "__tests__/expressjs",
+      "__tests__/nestjs",
+      "__tests__/integrations"
+    ],
+    "preset": "ts-jest"
   }
 }
