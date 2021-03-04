@@ -15,8 +15,12 @@ export class TracesLoader {
         })
     }
 
-    get<T>(correlationId: string): T {
+    get<T>(correlationId: string): T | undefined {
         const trace = this.traces[correlationId]
+        if (!trace){
+            return undefined
+        }
+
         return parse(trace.data)
     }
 }

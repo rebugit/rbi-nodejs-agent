@@ -57,9 +57,9 @@ const getDataFromDatabase = async () => {
         return res[0][0].result
     }
 
-    await pg.connect()
-    const res = await pg.query('SELECT 1 + 5 * $1 AS result', [4])
-
+    const client = await pg.connect()
+    const res = await client.query('SELECT 1 + 5 * $1 AS result', [4])
+    await client.release()
     return res.rows[0].result
 }
 

@@ -4,7 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "test": "jest --passWithNoTests __tests__/ && npm run build && npm link && (cd __tests__/integrations && ./run.sh)",
+    "test": "jest __tests__/ && npm run build && npm link && (cd __tests__/integrations && ./run.sh)",
+    "test:integrations": "npm run build && npm link && (cd __tests__/integrations && ./run.sh)",
     "build": "tsc"
   },
   "keywords": [
