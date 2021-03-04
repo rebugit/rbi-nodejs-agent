@@ -3,7 +3,6 @@ import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegration} from "./index";
 import {QueryResult} from "pg";
-import {stringify} from "flatted";
 import {Trace} from "../trace/Trace";
 
 const shimmer = require("shimmer");
@@ -47,6 +46,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                     const newArgs = [...args];
                     const statement = integration.getStatement(newArgs);
                     const correlationId = integration.hashSha1(statement);
+                    logger.info(`statement ${statement}`, integration.namespace)
 
                     let originalCallback: any;
                     let callbackIndex = -1;
@@ -70,18 +70,28 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                     const result = query.apply(this, newArgs);
 
                     if (result && typeof result.then === 'function') {
+                        if (integration.env === 'debug') {
+                            // mock pg client
+                            return Promise.resolve(integration.handleResponse(null, correlationId))
+                        }
+
                         result.then(function (value: QueryResult) {
                             return integration.handleResponse(value, correlationId)
                         }).catch(function (error: any) {
-                            console.log("ERROR: ", error)
+                            logger.error(error, integration.namespace)
                             return error;
                         });
                     }
 
+                    if (integration.env === 'debug') {
+                        // mock pg client
+
+                        return
+                    }
+
                     return result;
                 } catch (error) {
-                    // @ts-ignore
-                    console.log(error.message, error.stack)
+                    logger.error(error, integration.namespace)
                     return query.apply(this, args);
                 }
             };
@@ -90,10 +100,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
 
     private handleResponse(value: QueryResult, correlationId: string): QueryResult {
         if (this.env === 'debug') {
-
-
-            return value
-
+            return this.tracesLoader.get<QueryResult>(correlationId)
         } else {
             const data = {
                 value: value.rows

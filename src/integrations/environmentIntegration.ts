@@ -15,7 +15,7 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
     constructor() {
         super()
 
-        this.namespace = 'environment'
+        this.namespace = 'environmentIntegration'
     }
 
     end(): void {
@@ -26,11 +26,12 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
         this.configuration = config
 
         if (this.env === 'debug') {
+            this.cleanEnvironment()
             const data = tracesLoader.get<{ [key: string]: string }>(integrationType.ENVIRONMENT);
             logger.info(`trace loaded: ${data}`, this.namespace)
             this.injectEnvironment(data)
 
-            logger.info(`environment: `, process.env)
+            logger.info(`environment: ${process.env}`, this.namespace)
         } else {
             const trace = new Trace({
                 operationType: integrationType.ENVIRONMENT,
@@ -69,6 +70,17 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
     private injectEnvironment(env: { [key: string]: string }) {
         Object.keys(env).forEach(key => {
             process.env[key] = env[key]
+        })
+    }
+
+    /**
+     * This method will clean up our process environment variables.
+     * It won't delete our SDK variables
+     */
+    private cleanEnvironment(){
+        Object.keys(process.env).forEach(key => {
+            if (key.toUpperCase().startsWith('REBUGIT_')) return
+            delete process.env[key]
         })
     }
 }

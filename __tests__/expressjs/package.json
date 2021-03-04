@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "(cd ../../ && npm run build && npm link) && npm link rbi-nodejs-agent && REBUGIT_DEBUG=ALL NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=production nodemon --preserve-symlinks server.js"
+    "start": "(cd ../../ && npm run build && npm link) && npm link rbi-nodejs-agent && REBUGIT_LOG=ALL NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=production nodemon --preserve-symlinks server.js"
   },
   "keywords": [],
   "author": "",

@@ -1,7 +1,6 @@
 const http = require("http");
 const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
-const cors = require('cors')
 // This package must be imported even if there are no methods to require
 const {RebugitSDK} = require('rbi-nodejs-agent');
 const {Pool} = require('pg')
@@ -23,7 +22,7 @@ function myCustomIntegrationCallback(env, close, getData, wrap) {
     })
 
     return {
-        module: cors,
+        module: {},
         name: 'cors'
     }
 }

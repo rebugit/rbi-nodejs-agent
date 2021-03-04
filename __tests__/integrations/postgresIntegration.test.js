@@ -16,7 +16,7 @@ async function productionMode() {
 
     function beforeEach(name) {
         console.log(`============= TESTING: should ${name} ===================`)
-        process.env.REBUGIT_DEBUG = 'ALL'
+        process.env.REBUGIT_LOG = 'ALL'
         const tracer = new Tracer()
         const tracesLoader = new TracesLoader()
         postgresIntegration = new Pg()

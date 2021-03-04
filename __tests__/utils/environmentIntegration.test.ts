@@ -45,10 +45,11 @@ describe('EnvironmentIntegration', function () {
         })
         expect(tracer.traces[0].correlationId).toBe('ENVIRONMENT')
         expect(tracer.traces[0].operationType).toBe('ENVIRONMENT')
+
+        delete process.env.REBUGIT_SOMETHING
     });
 
     it('should inject environment', function () {
-        clearEnvironmentVariables()
         process.env.REBUGIT_ENV = 'debug'
 
         const tracer = new Tracer()

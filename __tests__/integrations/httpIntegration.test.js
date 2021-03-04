@@ -20,7 +20,7 @@ async function httpIntegrationProductionMode() {
 
     function beforeEach(name) {
         console.log(`============= TESTING: should ${name} ===================`)
-        process.env.REBUGIT_DEBUG = 'ALL'
+        process.env.REBUGIT_LOG = 'ALL'
         const tracer = new Tracer()
         const tracesLoader = new TracesLoader()
         httpIntegration = new Http()
@@ -117,7 +117,7 @@ async function httpIntegrationDebugMode() {
 
     function beforeEach(name) {
         console.log(`============= TESTING: should ${name} ===================`)
-        process.env.REBUGIT_DEBUG = 'ALL'
+        process.env.REBUGIT_LOG = 'ALL'
         process.env.REBUGIT_ENV = 'debug'
         const tracer = new Tracer()
         const tracesLoader = new TracesLoader()
