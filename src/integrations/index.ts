@@ -4,6 +4,7 @@ import {IIntegrationConfig} from "../config";
 
 const {PostgresIntegration} = require("./postgresIntegration");
 const {HttpIntegration} = require("./httpIntegration");
+const {EnvironmentIntegration} = require('./environmentIntegration')
 
 export interface IIntegration {
     end(): void
@@ -13,4 +14,5 @@ export interface IIntegration {
 module.exports = {
     Http: HttpIntegration,
     Pg: PostgresIntegration,
+    Env: EnvironmentIntegration
 }

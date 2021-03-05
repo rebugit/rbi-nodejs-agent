@@ -3,5 +3,6 @@ export enum integrationType {
     REQUEST = 'REQUEST',
     QUERY = 'QUERY',
     ENVIRONMENT = 'ENVIRONMENT',
+    LAMBDA = 'LAMBDA',
     CUSTOM = 'CUSTOM'
 }

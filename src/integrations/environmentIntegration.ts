@@ -23,7 +23,7 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
     }
 
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
-        this.configuration = config
+        this.configuration = config || {}
 
         if (this.env === 'debug') {
             this.cleanEnvironment()
@@ -52,8 +52,11 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
             }
 
             // Skip any blacklisted fields from the configuration
-            if (this.configuration.blackListFields) {
-                if (this.configuration.blackListFields.includes(key)) {
+            const blacklistFromConfig = this.configuration.blackListFields || []
+            // merge the user supplied list with our own internal list
+            const fullBlacklist = [...blacklistFromConfig, ...blacklistEnvironment]
+            if (fullBlacklist) {
+                if (fullBlacklist.includes(key)) {
                     continue
                 }
             }
@@ -84,3 +87,5 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
         })
     }
 }
+
+const blacklistEnvironment = []

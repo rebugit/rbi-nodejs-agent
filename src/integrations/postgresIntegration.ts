@@ -24,9 +24,8 @@ export class PostgresIntegration extends Integrations implements IIntegration {
     private tracesLoader: TracesLoader;
     private readonly env: string;
     private config: IIntegrationConfig;
-    private namespace: string;
+    private readonly namespace: string;
     private _pg: any;
-    private _pgPool: any;
 
     constructor() {
         super()
@@ -54,19 +53,9 @@ export class PostgresIntegration extends Integrations implements IIntegration {
              */
             if (this.env === Environments.DEBUG) {
                 shimmer.wrap(pg.Client.prototype, 'connect', this.wrapMockConnect())
-                shimmer.wrap(pg.Client.prototype, 'query', this.wrapForDebug())
+                shimmer.wrap(pg.Client.prototype, 'query', this.wrapMockQuery())
             } else {
                 shimmer.wrap(pg.Client.prototype, 'query', this.wrap())
-            }
-        }
-
-        const pgPool = this.require('pg-pool')
-        if (pgPool) {
-            this._pgPool = pgPool
-
-            if (this.env === Environments.DEBUG) {
-                shimmer.wrap(pgPool.prototype, 'query', this.wrapForDebug())
-                shimmer.wrap(pgPool.prototype, 'connect', this.wrapDebugPool())
             }
         }
     }
@@ -112,7 +101,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrapForDebug() {
+    private wrapMockQuery() {
         const integration = this
         return function () {
             return function (...args): Promise<IQueryData> | any {
@@ -131,39 +120,9 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrapDebugPool() {
-        const integration = this
-        return function () {
-            return function (): any {
-                logger.info(`executing pool debug wrapper`, integration.namespace)
-
-                const poolMock = new PgMock().mockPool()
-                // @ts-ignore
-                poolMock.query = (...args) => {
-                    const newArgs = [...args];
-                    const statement = integration.getStatement(newArgs);
-                    const data = integration.handleResponse(null, statement)
-                    logger.info(`statement ${statement}`, integration.namespace)
-                    logger.info(`trace data ${data}`, integration.namespace)
-
-                    const {callback} = integration.getCallback(newArgs);
-
-                    if (callback) {
-                        callback(data)
-                    } else {
-                        return Promise.resolve(data)
-                    }
-                }
-
-                return poolMock
-            }
-        }
-    }
-
     /**
-     * This methods mock extra pg client methods.
-     * In debug method we do not need to connect to the database, therefore we need to mock that method.
-     * There might be more methods in the future so we keep the function open to extension
+     * This method mock the connect method.
+     * In debug mode we do not connect to the database, therefore we need to mock that method.
      */
     private wrapMockConnect() {
         let integration = this
@@ -172,12 +131,18 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                 logger.info(`mocking: connect method`, integration.namespace)
                 if (arguments.length) {
                     const __this = {
+                        /**
+                         * callback(err), Sequelize uses this signature
+                         * callback(err, callback): Client, Knex uses this signature which returns a client object
+                         * with the query method
+                         */
                         _connect: (callback?: (...args: any[]) => void): any => {
                             callback(null, {
                                 on: () => {
                                 },
                                 query: (...args) => {
-                                    return integration.wrapForDebug()()(...args)
+                                    // This is small hack to re-use the wrapper for the query in debug mode
+                                    return integration.wrapMockQuery()()(...args)
                                 }
                             })
                         }
@@ -186,6 +151,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                     return original.apply(__this, arguments)
                 }
 
+                // This just returns void and skip the connection
                 return new PgMock().mockPg({}).connect
             }
         }
@@ -202,9 +168,10 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             }
 
             return {
+                // this is for knex that makes some operation on the version string
                 rows: [{version: "PostgreSQL 10.11 "}],
                 fields: [],
-                command: "SELECT",
+                command: "",
                 rowCount: 0
             }
         } else {
@@ -315,11 +282,6 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             shimmer.unwrap(this._pg.Client.prototype, 'query')
             shimmer.unwrap(this._pg.Client.prototype, 'connect')
         }
-
-        if (this._pgPool) {
-            shimmer.unwrap(this._pgPool.prototype, 'query')
-            shimmer.unwrap(this._pgPool.prototype, 'connect')
-        }
     }
 }
 
@@ -329,5 +291,6 @@ export class PostgresIntegration extends Integrations implements IIntegration {
 const blackListStatements: string[] = [
     'SET CLIENT_MIN_MESSAGES TO WARNING',
     'SELECT VERSION();',
+    'SHOW SERVER_VERSION',
     'WITH ranges AS (  SELECT pg_range.rngtypid, pg_type.typname AS rngtypname,         pg_type.typarray AS rngtyparray, pg_range.rngsubtype    FROM pg_range LEFT OUTER JOIN pg_type ON pg_type.oid = pg_range.rngtypid)SELECT pg_type.typname, pg_type.typtype, pg_type.oid, pg_type.typarray,       ranges.rngtypname, ranges.rngtypid, ranges.rngtyparray  FROM pg_type LEFT OUTER JOIN ranges ON pg_type.oid = ranges.rngsubtype WHERE (pg_type.typtype IN(\'b\', \'e\'));'
 ]

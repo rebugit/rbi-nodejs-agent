@@ -155,7 +155,6 @@ async function debugMode() {
         afterEach()
     }
 
-
     await pg()
     await pgPool()
     await sequelize()

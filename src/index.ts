@@ -4,6 +4,9 @@ import {TracesLoader} from "./trace/TracesLoader";
 import {IGlobalConfig} from "./config";
 import {CustomIntegration} from "./integrations/customIntegration";
 import {Tracer} from "./trace/Tracer";
+import {Trace} from "./trace/Trace";
+import {integrationType} from "./integrations/constants";
+import {Environments} from "./config/constants";
 
 const integrations = require('./integrations')
 const {ErrorDomain} = require("./trace/ErrorDomain");
@@ -80,6 +83,8 @@ class RebugitSDK {
                     logger.info(`traces loaded in memory`)
                     const correlationId = handlerIntegration.getCorrelationId(req)
                     const span = this.tracesLoader.get(correlationId);
+                    logger.info(`correlation id: ${correlationId}`)
+                    logger.info(`trace data: ${span}`)
                     handlerIntegration.injectTraceToRequest(req, span)
                     logger.info(`handler trace injected into request object`)
 
@@ -111,6 +116,36 @@ class RebugitSDK {
                 logger.info(`Ending trace with traceId: ${this.tracer.traceId}`)
                 this.clean()
                 next(err)
+            },
+
+            lambdaHandler: (func: (...args: any[]) => any) => {
+                const tracer = new Tracer()
+                this.tracer = tracer
+
+                logger.info(`init lambda handler with traceId: ${tracer.traceId}`)
+
+                return (event: any, context: any, callback: any) => {
+                    if (this.env === Environments.DEBUG){
+                        const {event, context} = this.tracesLoader.get<any>('lambda_event');
+
+                        return func(event, context)
+                    } else {
+                        this._initIntegrations(tracer)
+
+                        const trace = new Trace({
+                            data: {
+                                event,
+                                context
+                            },
+                            correlationId: 'lambda_event',
+                            operationType: integrationType.LAMBDA,
+                        })
+
+                        tracer.add(trace.trace())
+                    }
+
+                    return func(event, context, callback)
+                };
             }
         }
     }
