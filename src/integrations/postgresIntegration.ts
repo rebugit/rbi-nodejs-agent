@@ -5,7 +5,7 @@ import {IIntegration} from "./index";
 import {FieldDef, QueryResult} from "pg";
 import {Trace} from "../trace/Trace";
 import {PgMock} from "./mocks/pg";
-import {Environments} from "../config/constants";
+import {Environments} from "../sharedKernel/constants";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')

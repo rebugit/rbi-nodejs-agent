@@ -1,0 +1,19 @@
+{
+  "name": "lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "handler.js",
+  "scripts": {
+    "build": "(cd ../../ && npm run build) && rsync -a ../../package.json node_modules/rbi-nodejs-agent/ && rsync -a ../../dist node_modules/rbi-nodejs-agent/",
+    "start": "npm run build && sam local start-api --port 9091 2>&1 | tr \"\\r\" \"\\n\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.857.0",
+    "flatted": "^3.1.1",
+    "shimmer": "^1.2.1"
+  },
+  "devDependencies": {}
+}

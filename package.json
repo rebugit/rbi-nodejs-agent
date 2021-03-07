@@ -15,6 +15,7 @@
   "author": "Matteo Gioioso",
   "license": "MIT",
   "dependencies": {
+    "@types/aws-lambda": "^8.10.72",
     "flatted": "^3.1.1",
     "shimmer": "^1.2.1",
     "uuid": "^8.3.2"
@@ -42,7 +43,8 @@
     "modulePathIgnorePatterns": [
       "__tests__/expressjs",
       "__tests__/nestjs",
-      "__tests__/integrations"
+      "__tests__/integrations",
+      "__tests__/lambda"
     ],
     "preset": "ts-jest"
   }

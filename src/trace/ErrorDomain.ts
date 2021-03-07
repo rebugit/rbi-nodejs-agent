@@ -9,7 +9,7 @@ export class ErrorDomain {
     private readonly message: string;
     private readonly stack: string;
 
-    constructor(traceId, error) {
+    constructor(traceId: string, error: Error | {message: string, stack?: string}) {
         this.traceId = traceId
         this.message = error.message
         this.stack = error.stack
