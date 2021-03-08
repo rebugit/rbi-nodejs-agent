@@ -4,7 +4,7 @@ import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegrationConfig} from "../config";
 import {ITrace, Trace} from "../trace/Trace";
-import {integrationType} from "./constants";
+import {OperationsType} from "./constants";
 
 const logger = require('../logger')
 const shimmer = require('shimmer')
@@ -61,7 +61,7 @@ export class CustomIntegration extends Integrations implements IIntegration {
         const obj: ITrace = {
             data,
             correlationId,
-            operationType: integrationType.CUSTOM
+            operationType: OperationsType.CUSTOM
         }
 
         const trace = new Trace(obj);

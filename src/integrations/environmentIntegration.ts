@@ -4,7 +4,7 @@ import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegrationConfig} from "../config";
 import {Trace} from "../trace/Trace";
-import {integrationType} from "./constants";
+import {OperationsType} from "./constants";
 
 const logger = require('../logger')
 
@@ -27,15 +27,15 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
 
         if (this.env === 'debug') {
             this.cleanEnvironment()
-            const data = tracesLoader.get<{ [key: string]: string }>(integrationType.ENVIRONMENT);
+            const data = tracesLoader.get<{ [key: string]: string }>(OperationsType.ENVIRONMENT);
             logger.info(`trace loaded: ${data}`, this.namespace)
             this.injectEnvironment(data)
 
             logger.info(`environment: ${process.env}`, this.namespace)
         } else {
             const trace = new Trace({
-                operationType: integrationType.ENVIRONMENT,
-                correlationId: integrationType.ENVIRONMENT,
+                operationType: OperationsType.ENVIRONMENT,
+                correlationId: OperationsType.ENVIRONMENT,
                 data: this.selectEnvVariables(),
             })
 

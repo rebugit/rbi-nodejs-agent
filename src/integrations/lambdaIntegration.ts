@@ -1,11 +1,11 @@
 import {Trace} from "../trace/Trace";
 import {CorrelationIds, Environments, InternalExceptions} from "../sharedKernel/constants";
-import {integrationType} from "./constants";
+import {OperationsType} from "./constants";
 import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {Callback, Context} from "aws-lambda";
 import {ErrorDomain} from "../trace/ErrorDomain";
-import {TraceServiceApi} from "../trace/Api";
+import {ITraceServiceApi, TraceServiceApi} from "../trace/Api";
 import {Integrations} from "./integrations";
 
 const logger = require('../logger')
@@ -18,10 +18,10 @@ interface ILambdaData {
 export class LambdaIntegration extends Integrations {
     private readonly tracer: Tracer;
     private tracesLoader: TracesLoader;
-    private api: TraceServiceApi;
+    private api: ITraceServiceApi;
     private readonly namespace: string;
 
-    constructor(tracer: Tracer, tracesLoader: TracesLoader, api: TraceServiceApi) {
+    constructor(tracer: Tracer, tracesLoader: TracesLoader, api: ITraceServiceApi) {
         super()
         this.tracer = tracer;
         this.tracesLoader = tracesLoader
@@ -40,7 +40,7 @@ export class LambdaIntegration extends Integrations {
                 context: obj.context
             },
             correlationId: CorrelationIds.LAMBDA_REQUEST,
-            operationType: integrationType.LAMBDA,
+            operationType: OperationsType.LAMBDA,
         })
 
         this.tracer.add(trace.trace())
@@ -96,7 +96,6 @@ export class LambdaIntegration extends Integrations {
         }
 
         return response
-
     }
 
     async captureException(e: Error | { message: string, stackTrace?: string }): Promise<void> {

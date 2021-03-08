@@ -1,4 +1,4 @@
-export enum integrationType {
+export enum OperationsType {
     RESPONSE = 'RESPONSE',
     REQUEST = 'REQUEST',
     QUERY = 'QUERY',

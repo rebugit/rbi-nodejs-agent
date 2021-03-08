@@ -19,14 +19,6 @@ export class PgMock {
         // @ts-ignore
         return {
             connect(callback?: (err: Error) => void): any {
-                // @ts-ignore
-                callback(null, {
-                    on: function () {
-                    },
-                    query: function (...args) {
-                        return arguments[1](null, returnValue)
-                    }
-                })
             },
             copyFrom(queryText: string): stream.Writable {
                 return undefined;

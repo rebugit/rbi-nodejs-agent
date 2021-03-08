@@ -7,7 +7,7 @@ import {InternalExceptions} from "../sharedKernel/constants";
 const https = require('https')
 const logger = require('../logger')
 
-interface ITraceServiceApi {
+export interface ITraceServiceApi {
     findByTraceId(traceId: string): Promise<ITrace[]>
     createError(tracer, error): Promise<void>
 }
@@ -36,7 +36,7 @@ export class TraceServiceApi implements ITraceServiceApi {
             timeout: 200,
             agent: new Agent({
                 keepAlive: true,
-                maxSockets: 10
+                maxSockets: 25
             })
         }
     }

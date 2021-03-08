@@ -79,7 +79,7 @@ class RebugitSDK {
                     logger.info("end request")
                 });
 
-                if (this.env === 'debug') {
+                if (this.env === Environments.DEBUG) {
                     const traces = await this.api.findByTraceId()
                     this.tracesLoader.load(traces)
                     logger.info(`traces loaded in memory`)
@@ -105,10 +105,14 @@ class RebugitSDK {
             errorHandler: ({Sentry}) => (err, req, res, next) => {
                 this._endIntegrations()
 
-                if (this.env === 'debug') {
+                if (this.env === Environments.DEBUG) {
                     return next(err)
                 }
 
+                /**
+                 * Temporary Sentry integration
+                 * TODO: remove this
+                 */
                 if (Sentry) {
                     Sentry.setTag("rebugit-traceId", this.tracer.traceId);
                 }
