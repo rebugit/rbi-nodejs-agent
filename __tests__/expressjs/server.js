@@ -1,11 +1,11 @@
 const http = require("http");
 const {Sequelize} = require('sequelize')
 const Sentry = require('@sentry/node')
-const cors = require('cors')
 // This package must be imported even if there are no methods to require
 const {RebugitSDK} = require('rbi-nodejs-agent');
 const {Pool} = require('pg')
 const axios = require('axios')
+const cors = require('cors')
 const bodyParser = require('body-parser')
 const express = require('express')
 const request = require('request')
@@ -23,13 +23,13 @@ function myCustomIntegrationCallback(env, close, getData, wrap) {
     })
 
     return {
-        module: cors,
+        module: {},
         name: 'cors'
     }
 }
 
 const Rebugit = new RebugitSDK({
-    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiJmZDNlOWFkZS0zZjM0LTQzNTQtYTIyMS0zNDJhMWU2NmQ5ZDMiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.ax1Iehf3QGne9p3oaloH01kwGdSvoJ0mAnCcPc1qyjA',
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiIxNWY5MjJlNy0zZGJiLTQwMWMtOTJiOS1mODE3ODZlODExMmMiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.EsXiWTOabQuvEbjlBDZf_F8TMKz036xUjchpsGNBjCs',
     // customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
 })
 
@@ -58,9 +58,9 @@ const getDataFromDatabase = async () => {
         return res[0][0].result
     }
 
-    await pg.connect()
-    const res = await pg.query('SELECT 1 + 5 * $1 AS result', [4])
-
+    const client = await pg.connect()
+    const res = await client.query('SELECT 1 + 5 * $1 AS result', [4])
+    await client.release()
     return res.rows[0].result
 }
 
@@ -75,9 +75,9 @@ const requestWithRequest = () => new Promise((resolve, reject) => {
 
 const callExternalAPI = async () => {
     if (isAxios){
-        // const resp = await axios.get('http://jsonplaceholder.typicode.com/todos/1')
-        // return resp.data
-        return requestWithRequest()
+        const resp = await axios.get('http://jsonplaceholder.typicode.com/todos/1')
+        return resp.data
+        // return requestWithRequest()
     } else {
         const options = {
             host: 'jsonplaceholder.typicode.com',
@@ -129,8 +129,10 @@ const doStuff = async (req, res, next) => {
     const length = data.title.length;
     console.log("Title length: ", length)
 
-    if (length - num === 0) {
-        return next(new Error("Error: division by 0!!"))
+    if (process.env.CUSTOM_ENV === 'allowError'){
+        if (length - num === 0) {
+            return next(new Error("Error: division by 0!!"))
+        }
     }
 
     const magicNumber = 18 / (length - num)

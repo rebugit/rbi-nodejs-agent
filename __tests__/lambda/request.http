@@ -1,0 +1,16 @@
+POST http://localhost:9091/numbers
+Content-Type: application/json
+
+{
+  "num": 8
+}
+
+###
+POST http://localhost:9091/numberscb
+Content-Type: application/json
+
+{
+  "num": 8
+}
+
+###

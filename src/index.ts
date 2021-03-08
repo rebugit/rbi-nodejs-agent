@@ -4,6 +4,10 @@ import {TracesLoader} from "./trace/TracesLoader";
 import {IGlobalConfig} from "./config";
 import {CustomIntegration} from "./integrations/customIntegration";
 import {Tracer} from "./trace/Tracer";
+import {Environments} from "./sharedKernel/constants";
+import {Callback, Context} from "aws-lambda"
+import {LambdaIntegration} from "./integrations/lambdaIntegration";
+
 
 const integrations = require('./integrations')
 const {ErrorDomain} = require("./trace/ErrorDomain");
@@ -12,11 +16,12 @@ const logger = require('./logger')
 
 class RebugitSDK {
     private readonly config: IGlobalConfig;
-    private api: TraceServiceApi;
+    private readonly api: TraceServiceApi;
     private readonly tracesLoader: TracesLoader;
     private integrations: Map<string, IIntegration>;
     private readonly env: string;
     private tracer: Tracer;
+    private lambdaIntegration: LambdaIntegration;
 
     constructor(config: IGlobalConfig) {
         this.config = config
@@ -74,12 +79,14 @@ class RebugitSDK {
                     logger.info("end request")
                 });
 
-                if (this.env === 'debug') {
+                if (this.env === Environments.DEBUG) {
                     const traces = await this.api.findByTraceId()
                     this.tracesLoader.load(traces)
                     logger.info(`traces loaded in memory`)
                     const correlationId = handlerIntegration.getCorrelationId(req)
                     const span = this.tracesLoader.get(correlationId);
+                    logger.info(`correlation id: ${correlationId}`)
+                    logger.info(`trace data: ${span}`)
                     handlerIntegration.injectTraceToRequest(req, span)
                     logger.info(`handler trace injected into request object`)
 
@@ -98,10 +105,14 @@ class RebugitSDK {
             errorHandler: ({Sentry}) => (err, req, res, next) => {
                 this._endIntegrations()
 
-                if (this.env === 'debug') {
+                if (this.env === Environments.DEBUG) {
                     return next(err)
                 }
 
+                /**
+                 * Temporary Sentry integration
+                 * TODO: remove this
+                 */
                 if (Sentry) {
                     Sentry.setTag("rebugit-traceId", this.tracer.traceId);
                 }
@@ -111,11 +122,59 @@ class RebugitSDK {
                 logger.info(`Ending trace with traceId: ${this.tracer.traceId}`)
                 this.clean()
                 next(err)
+            },
+        }
+    }
+
+    AWSLambda() {
+        return {
+            lambdaHandler: (func: (...args: any[]) => any) => {
+                const tracer = new Tracer()
+                const lambdaIntegration = new LambdaIntegration(tracer, this.tracesLoader, this.api)
+                this.lambdaIntegration = lambdaIntegration
+                this.tracer = tracer
+                logger.info(`init lambda handler with traceId: ${tracer.traceId}`)
+
+                return async (event: any, context: Context, callback: Callback) => {
+                    this._initIntegrations(tracer)
+
+                    if (this.env === Environments.DEBUG) {
+                        const {context, event} = lambdaIntegration.extractRequest();
+                        return func(event, context)
+                    } else {
+                        lambdaIntegration.captureRequest({event, context})
+                    }
+
+                    if (func.length > 2) {
+                        logger.info("wrapping lambda callback")
+                        const wrappedCallback = lambdaIntegration.wrapCallback(
+                            callback,
+                            () => {
+                                this._endIntegrations()
+                            }
+                        )
+                        func(event, context, wrappedCallback)
+                    } else {
+                        logger.info("executing async handler")
+                        return lambdaIntegration.asyncHandler(
+                            func,
+                            {context, event},
+                            () => {
+                                this._endIntegrations()
+                            }
+                        )
+                    }
+                };
+            },
+
+            captureError: async (e): Promise<void> => {
+                this._endIntegrations()
+                return this.lambdaIntegration.captureException(e)
             }
         }
     }
 
-    private clean(){
+    private clean() {
         this.tracer = null
     }
 }

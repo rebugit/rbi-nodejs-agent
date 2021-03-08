@@ -81,7 +81,7 @@ describe('customIntegration', function () {
 
         expect(tracer.traces[0].correlationId).toBe('my-coor-id-1')
         expect(tracer.traces[0].data).toBe(stringify('data1'))
-        expect(tracer.traces[0].operationType).toBe('RESPONSE')
+        expect(tracer.traces[0].operationType).toBe('CUSTOM')
         expect(tracer.traces[0].traceId).toBeDefined()
     })
 });

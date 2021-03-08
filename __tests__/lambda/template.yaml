@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+Description: "test template for rebugit"
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - production
+      - stag
+      - dev
+    ConstraintDescription: invalid environment, only [prod, stag, dev] are allowed
+
+Globals:
+  Function:
+    Runtime: nodejs10.x
+    Timeout: 30
+    MemorySize: 128
+    Environment:
+      Variables:
+        NODE_ENV: production
+        CUSTOM_ENV: allowError
+        REBUGIT_LOG: ALL
+        NODE_TLS_REJECT_UNAUTHORIZED: 0
+        REBUGIT_COLLECTOR_HOST: host.docker.internal
+
+Resources:
+  ExampleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: handler.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        HTTP:
+          Type: Api
+          Properties:
+            Path: /numbers
+            Method: Post
+  ExampleCallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: handler.handlerWithCallback
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        HTTP:
+          Type: Api
+          Properties:
+            Path: /numberscb
+            Method: Post
+
+
+
