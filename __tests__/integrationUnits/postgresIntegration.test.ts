@@ -6,8 +6,7 @@ import {TracesLoader} from "../../src/trace/TracesLoader";
 import {parse} from "flatted";
 import {ITrace} from "../../src/trace/Trace";
 import {Environments} from "../../src/sharedKernel/constants";
-
-const {sha1} = require('../integrations/utils')
+import {sha1} from "../utils";
 
 const compareHashedQuery = (hashedQuery: string): boolean => {
     const sha = sha1(fakeQuery.replace('$1', fakeValues[0].toString()));
