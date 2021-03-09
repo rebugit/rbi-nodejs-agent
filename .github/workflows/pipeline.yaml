@@ -20,6 +20,8 @@ jobs:
         run: npm ci
       - name: test
         run: npm run test:units
+      - name: build
+        run: npm run build
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
