@@ -46,7 +46,8 @@
       "__tests__/expressjs",
       "__tests__/nestjs",
       "__tests__/integrations",
-      "__tests__/lambda"
+      "__tests__/lambda",
+      "__tests__/utils.ts"
     ],
     "preset": "ts-jest"
   }

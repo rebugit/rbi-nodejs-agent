@@ -9,8 +9,7 @@ import {OperationsType} from "../../src/integrations/constants";
 import {parse, stringify} from "flatted";
 import Mock = jest.Mock;
 import Spy = jest.SpyInstance;
-
-const {clearEnvironmentVariables} = require('../integrations/utils')
+import {clearEnvironmentVariables} from "../utils";
 
 
 class MockApi implements ITraceServiceApi {
