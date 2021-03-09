@@ -75,7 +75,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
 
                     if (callbackIndex >= 0) {
                         // Inject callback
-                        newArgs[callbackIndex] = (err: any, value: QueryResult) => {
+                        newArgs[callbackIndex] = (err: Error, value: QueryResult) => {
                             const queryResult = integration.handleResponse(value, statement);
                             originalCallback(err, queryResult)
                         };
@@ -175,6 +175,14 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                 rowCount: 0
             }
         } else {
+            if (!value){
+                return {
+                    rowCount: 0,
+                    rows: [],
+                    command: "",
+                }
+            }
+
             if (this.isInvalidStatement(statement)) {
                 return value
             }
