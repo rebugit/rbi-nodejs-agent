@@ -48,7 +48,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             this._pg = pg
 
             /**
-             * In debug mode, rather then mock only the query method, we need to mock extra methods,
+             * In debug mode we need to mock extra methods,
              * one of those is connect since we need to avoid connecting to the physical database
              */
             if (this.env === Environments.DEBUG) {
@@ -129,6 +129,13 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         return function (original) {
             return function (): any {
                 logger.info(`mocking: connect method`, integration.namespace)
+                logger.info(`mocking: args number: ${arguments.length}`, integration.namespace)
+
+                /**
+                 * Connect method can have a callback.
+                 * in the Pool class even though we call await pool.connect(),
+                 * internally Pg will call the connect method with a callback
+                 */
                 if (arguments.length) {
                     const __this = {
                         /**
@@ -151,7 +158,9 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                     return original.apply(__this, arguments)
                 }
 
-                // This just returns void and skip the connection
+                /**
+                 * This is used by client.connect()
+                 */
                 return new PgMock().mockPg({}).connect
             }
         }
@@ -175,7 +184,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
                 rowCount: 0
             }
         } else {
-            if (!value){
+            if (!value) {
                 return {
                     rowCount: 0,
                     rows: [],

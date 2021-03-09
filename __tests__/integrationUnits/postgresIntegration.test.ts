@@ -1,10 +1,11 @@
 import shimmer = require("shimmer");
 import {PostgresIntegration} from "../../src/integrations/postgresIntegration";
-import {QueryConfig, QueryResult} from "pg";
+import {ClientBase, QueryConfig, QueryResult} from "pg";
 import {Tracer} from "../../src/trace/Tracer";
 import {TracesLoader} from "../../src/trace/TracesLoader";
 import {parse} from "flatted";
 import {ITrace} from "../../src/trace/Trace";
+import {Environments} from "../../src/sharedKernel/constants";
 
 const {sha1} = require('../integrations/utils')
 
@@ -31,23 +32,22 @@ const fakeError = new Error('test error')
 process.env.REBUGIT_LOG = 'ALL'
 
 describe('PostgresIntegration', function () {
-    let tracer: Tracer,
-        tracesLoader: TracesLoader,
-        pgIntegration: PostgresIntegration
+    describe('production mode', function () {
+        let tracer: Tracer,
+            tracesLoader: TracesLoader,
+            pgIntegration: PostgresIntegration
 
-    beforeEach(function () {
-        pgIntegration = new PostgresIntegration()
-        tracer = new Tracer()
-        tracesLoader = new TracesLoader()
-        tracesLoader.load([fakeTrace])
-        pgIntegration.init(tracer, tracesLoader, {})
-    });
+        beforeEach(function () {
+            pgIntegration = new PostgresIntegration()
+            tracer = new Tracer()
+            tracesLoader = new TracesLoader()
+            pgIntegration.init(tracer, tracesLoader, {})
+        });
 
-    afterEach(function () {
-        pgIntegration.end()
-    });
+        afterEach(function () {
+            pgIntegration.end()
+        });
 
-    describe('debug mode', function () {
         it('Query config object async', async function () {
             class PgMock {
                 query(config: QueryConfig): Promise<QueryResult> {
@@ -201,6 +201,48 @@ describe('PostgresIntegration', function () {
     });
 
     describe('Debug mode', function () {
+        const mockImplementationError = new Error('this method was not mocked correctly')
+        type PoolClient = {
+            query: (query: string, value: any[]) => Promise<QueryResult>
+        }
 
+        let tracer: Tracer,
+            tracesLoader: TracesLoader,
+            pgIntegration: PostgresIntegration
+
+        beforeEach(function () {
+            process.env.REBUGIT_ENV = Environments.DEBUG
+            pgIntegration = new PostgresIntegration()
+            tracer = new Tracer()
+            tracesLoader = new TracesLoader()
+            tracesLoader.load([fakeTrace])
+            pgIntegration.init(tracer, tracesLoader, {})
+        });
+
+        afterEach(function () {
+            pgIntegration.end()
+            delete process.env.REBUGIT_ENV
+        });
+
+        it('should mock query with Pool async ', async function () {
+            class PgMock {
+                async connect(): Promise<ClientBase> {
+                    return Promise.reject(mockImplementationError)
+                }
+
+                async query(query: string, values: any[]): Promise<QueryResult> {
+                    return Promise.reject(mockImplementationError)
+                }
+            }
+
+            shimmer.wrap(PgMock.prototype, 'connect', pgIntegration['wrapMockConnect']())
+            shimmer.wrap(PgMock.prototype, 'query', pgIntegration['wrapMockQuery']())
+
+            const client = new PgMock()
+            await client.connect()
+            const resp = await client.query(fakeQuery, fakeValues)
+
+            expect(resp.rows[0].result).toBe(5)
+        });
     });
 });

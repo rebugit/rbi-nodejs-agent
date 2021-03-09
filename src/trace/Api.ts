@@ -26,6 +26,7 @@ export class TraceServiceApi implements ITraceServiceApi {
     private readonly token: string;
     private readonly apiKey: string;
     private readonly defaultOptions: RequestOptions;
+    private REQUEST_TIMEOUT = 250;
 
     constructor({apiKey}) {
         const host = 'localhost' // TODO: substitute with live application host
@@ -33,10 +34,12 @@ export class TraceServiceApi implements ITraceServiceApi {
         this.token = process.env.REBUGIT_TOKEN || ''
         this.apiKey = process.env.REBUGIT_API_KEY || apiKey
         this.defaultOptions = {
-            timeout: 200,
+            timeout: this.REQUEST_TIMEOUT,
             agent: new Agent({
                 keepAlive: true,
-                maxSockets: 25
+                maxSockets: 5,
+                maxFreeSockets: 5,
+                timeout: this.REQUEST_TIMEOUT
             })
         }
     }
