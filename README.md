@@ -1,1 +1,36 @@
-# rbi-nodejs-agent
+# Rebugit nodejs agent
+
+## Usage
+
+### Install
+
+`npm install rbi-nodejs-agent`
+
+### Configure
+
+#### Expressjs
+
+Simple express server:
+
+```js
+const {RebugitSDK} = require('rbi-nodejs-agent');
+const express = require('express')
+const app = express()
+const port = 9000
+
+const Rebugit = new RebugitSDK({
+    apiKey: 'my-api-key',
+})
+
+app.use(Rebugit.Handlers().requestHandler())
+app.post('/', (req, res) => {
+    res.status(200).send({
+        hello: 'world'
+    })
+})
+app.use(Rebugit.Handlers().errorHandler({Sentry}))
+
+app.listen(port, () => {
+    console.log(`Example app listening at http://localhost:${port}`)
+})
+```

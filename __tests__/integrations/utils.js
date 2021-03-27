@@ -14,7 +14,7 @@ const RESPONSE_BODY = {
     "title": "delectus aut autem",
     "userId": 1,
 }
-const DB_CONNECTION_URI = 'postgres://postgres:postgres@localhost:5433/postgres'
+const DB_CONNECTION_URI = 'postgres://postgres:postgres@localhost:5432/postgres'
 const DB_QUERY = 'SELECT 1 + 5 * $1 AS result'
 
 const requestWithHttp = (isHttps = false) => new Promise((resolve, reject) => {

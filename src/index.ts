@@ -25,7 +25,10 @@ class RebugitSDK {
 
     constructor(config: IGlobalConfig) {
         this.config = config
-        this.api = new TraceServiceApi({apiKey: config.apiKey})
+        this.api = new TraceServiceApi({
+            apiKey: config.apiKey,
+            collectorBaseUrl: config.collector && config.collector.collectorBaseUrl
+        })
         this.tracesLoader = new TracesLoader()
         this.integrations = new Map()
         this.env = process.env.REBUGIT_ENV || 'dev'

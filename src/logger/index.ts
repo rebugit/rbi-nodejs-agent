@@ -1,4 +1,4 @@
-function info(message: any, namespace: string) {
+function info(message: any, namespace?: string) {
     if (process.env.REBUGIT_LOG === "ALL") {
         console.log(_getNamespace(namespace, 'INFO'), JSON.stringify(message, null, 2))
     }

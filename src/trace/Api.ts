@@ -21,6 +21,11 @@ interface IData {
     error: IErrorDomain
 }
 
+export interface ITraceServiceApiConfig {
+    apiKey: string
+    collectorBaseUrl?: string
+}
+
 export class TraceServiceApi implements ITraceServiceApi {
     private readonly host: string;
     private readonly token: string;
@@ -28,11 +33,11 @@ export class TraceServiceApi implements ITraceServiceApi {
     private readonly defaultOptions: RequestOptions;
     private REQUEST_TIMEOUT = 250;
 
-    constructor({apiKey}) {
-        const host = 'localhost' // TODO: substitute with live application host
+    constructor(config: ITraceServiceApiConfig) {
+        const host = config.collectorBaseUrl || 'api.rebugit.com'
         this.host = process.env.REBUGIT_COLLECTOR_HOST || host
         this.token = process.env.REBUGIT_TOKEN || ''
-        this.apiKey = process.env.REBUGIT_API_KEY || apiKey
+        this.apiKey = process.env.REBUGIT_API_KEY || config.apiKey
         this.defaultOptions = {
             timeout: this.REQUEST_TIMEOUT,
             agent: new Agent({
