@@ -162,12 +162,12 @@ async function httpIntegrationDebugMode() {
     }
 
     await httpIntegrationTestAxios()
-    // await httpIntegrationTestWithSuperagent()
-    // await httpIntegrationTestWithHttp()
+    await httpIntegrationTestWithSuperagent()
+    await httpIntegrationTestWithHttp()
 }
 
 async function runTests() {
-    // await httpIntegrationProductionMode()
+    await httpIntegrationProductionMode()
     await httpIntegrationDebugMode()
     console.log("======DONE======")
 }
