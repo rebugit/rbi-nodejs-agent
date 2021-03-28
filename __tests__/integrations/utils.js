@@ -1,7 +1,8 @@
 const crypto = require("crypto");
 const http = require("http");
 const https = require("https");
-const request = require('request')
+const superagent = require('superagent')
+const got = require('got')
 const axios = require("axios");
 const {Sequelize} = require("sequelize");
 const {Client, Pool} = require('pg')
@@ -29,7 +30,7 @@ const requestWithHttp = (isHttps = false) => new Promise((resolve, reject) => {
 
     let client;
 
-    if (isHttps){
+    if (isHttps) {
         client = https
     } else {
         client = http
@@ -58,31 +59,27 @@ const requestWithHttp = (isHttps = false) => new Promise((resolve, reject) => {
     req.end();
 })
 
-const requestWithRequest = (isHttps = false) => new Promise((resolve, reject) => {
-    let url;
-    if (isHttps){
-        url = `https://${REQUEST_BASE_URL}/${PATH}`
-    } else {
-        url = `http://${REQUEST_BASE_URL}/${PATH}`
-    }
+const requestWithSuperagent = async () => {
+    const url = `https://${REQUEST_BASE_URL}/${PATH}`
+    const response = await superagent('get', url)
 
-    request(url, function (error, response, body) {
-        if (error){
-            return reject(error)
-        }
-        resolve(body)
-    });
-})
+    return response.body
+}
 
 const requestWithAxios = async (isHttps = false) => {
     let url;
-    if (isHttps){
+    if (isHttps) {
         url = `https://${REQUEST_BASE_URL}/${PATH}`
     } else {
         url = `http://${REQUEST_BASE_URL}/${PATH}`
     }
 
     return axios.get(url)
+}
+
+const requestWithGot = async () => {
+    const response = await got(`https://${REQUEST_BASE_URL}/${PATH}`)
+    return response.body
 }
 
 const sequelizeQuery = async (value) => {
@@ -144,10 +141,11 @@ const clearEnvironmentVariables = () => {
 };
 
 module.exports = {
-    requestWithRequest,
+    requestWithSuperagent,
     requestWithHttp,
-    clearEnvironmentVariables,
+    requestWithGot,
     requestWithAxios,
+    clearEnvironmentVariables,
     pgQuery,
     pgPoolQuery,
     sequelizeQuery,

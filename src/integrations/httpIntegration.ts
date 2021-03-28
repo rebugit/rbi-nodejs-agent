@@ -5,6 +5,7 @@ import {IIntegration} from "./index";
 import {Integrations} from "./integrations";
 import {IncomingHttpHeaders, IncomingMessage, RequestOptions} from "http";
 import {HttpMock} from "./mocks/http";
+import {URL} from "url";
 
 const url = require("url");
 const events = require("events");
@@ -20,6 +21,11 @@ interface IHttpTraceData {
     statusMessage: string
 }
 
+interface IRequestOptions {
+    method?: string
+    path?: string
+}
+
 export class HttpIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
     private tracesLoader: TracesLoader;
@@ -27,6 +33,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
     private readonly namespace: string;
     private _http: null;
     private _https: null;
+    private _dns: any;
 
     constructor() {
         super()
@@ -53,6 +60,17 @@ export class HttpIntegration extends Integrations implements IIntegration {
             shimmer.wrap(https, 'request', this.wrap());
             logger.info(`wrap https integration`, this.namespace)
         }
+
+        // const dns = this.require("dns");
+        // if (this.env === Environments.DEBUG && dns) {
+        //     this._dns = dns
+        //     shimmer.wrap(dns, 'lookup', this.wrapMockDns())
+        //     shimmer.wrap(dns, 'lookupService', this.wrapMockDns())
+        //     shimmer.wrap(dns, 'resolve', this.wrapMockDns())
+        //     shimmer.wrap(dns, 'resolveAny', this.wrapMockDns())
+        //     shimmer.wrap(dns, 'resolve4', this.wrapMockDns())
+        //     shimmer.wrap(dns, 'getServer', this.wrapMockDns())
+        // }
     }
 
     private getExtraFieldsFromRes(res: IncomingMessage, data: IHttpTraceData) {
@@ -71,45 +89,68 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
+    private getRequestObj(httpMock: HttpMock, correlationId: string) {
+        const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
+        logger.info(`correlationId: ${correlationId}`, this.namespace)
+        logger.info(`trace loaded: ${data}`, this.namespace)
+
+        const emitter = new events.EventEmitter()
+        const resMock = httpMock.createResponse(emitter);
+
+        // @ts-ignore
+        resMock.on = function (type, cb) {
+            if (type === 'data') {
+                cb(Buffer.from(data.body))
+            }
+
+            if (type === 'end') {
+                cb()
+            }
+        }
+
+        resMock.statusCode = data.statusCode
+        resMock.headers = data.headers
+        resMock.statusMessage = data.statusMessage
+        this.addExtraFieldsToRes(resMock, data)
+
+        return resMock
+    }
+
     private wrap() {
         const integration = this
         return (request) => {
-            return (options: RequestOptions, callback) => {
+            return function () {
+                let options: RequestOptions | any = arguments[0];
                 const method = (options.method || 'GET').toUpperCase();
                 options = typeof options === 'string' ? url.parse(options) : options;
-                // @ts-ignore
                 let path = options.path || options.pathname || '/';
-                const correlationId = this.getCorrelationId(method, path);
+                const correlationId = integration.getCorrelationId(method, path);
+
+                let originalCallback
+                if (options.callback) {
+                    originalCallback = options.callback
+                } else { // @ts-ignore
+                    if (typeof arguments[1] === "function") {
+                        originalCallback = arguments[1]
+                    } else if (arguments[2] && typeof arguments[2] === 'function'){
+                        originalCallback = arguments[2]
+                    }
+                }
 
                 try {
                     if (integration.env === 'debug') {
-                        const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
-                        logger.info(`correlationId: ${correlationId}`, this.namespace)
-                        logger.info(`trace loaded: ${data}`, this.namespace)
-
                         const httpMock = new HttpMock()
+                        const resMock = integration.getRequestObj(httpMock, correlationId);
 
                         const wrappedCallback = () => {
-                            const emitter = new events.EventEmitter()
-                            const resMock = httpMock.createResponseMock(emitter);
-
-                            process.nextTick(() => {
-                                resMock.emit('data', data.body)
-                                resMock.emit('end')
-                            })
-
-                            resMock.statusCode = data.statusCode
-                            resMock.headers = data.headers
-                            resMock.statusMessage = data.statusMessage
-                            this.addExtraFieldsToRes(resMock, data)
-
-                            // TODO: there is some error here:
-                            // Cannot read property 'aborted' of undefined TypeError: Cannot read property 'aborted' of undefined
-                            // however everything goes forward normally
-                            callback(resMock)
+                            originalCallback(resMock)
                         };
 
-                        return httpMock.mockRequest(null, wrappedCallback)
+                        if (!originalCallback) {
+                            return httpMock.request.call(this, resMock, function () {})
+                        }
+
+                        return httpMock.request.call(this, options, wrappedCallback)
                     } else {
                         const wrappedCallback = (res: IncomingMessage) => {
                             let output = '';
@@ -126,7 +167,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                                     statusMessage: res.statusMessage
                                 }
 
-                                this.getExtraFieldsFromRes(res, data)
+                                integration.getExtraFieldsFromRes(res, data)
 
                                 const obj = {
                                     data,
@@ -134,11 +175,11 @@ export class HttpIntegration extends Integrations implements IIntegration {
                                 }
 
                                 const trace = new Trace(obj);
-                                this.tracer.add(trace.trace())
+                                integration.tracer.add(trace.trace())
                             });
 
-                            if (callback){
-                                callback(res)
+                            if (originalCallback) {
+                                originalCallback(res)
                             }
                         };
 
@@ -146,11 +187,26 @@ export class HttpIntegration extends Integrations implements IIntegration {
                     }
                 } catch (error) {
                     logger.error(error, integration.namespace)
-                    return request.apply(this, [options, callback]);
+                    return request.apply(this, arguments);
                 }
             };
         }
     }
+
+    private wrapMockDns() {
+        const integration = this
+        return (lookup) => {
+            return function () {
+                console.log(arguments)
+                arguments[0] = '0.0.0.0'
+                arguments[2] = (...args) => {
+                    console.log(args)
+                }
+                return lookup.apply(this, arguments)
+            };
+        }
+    }
+
 
     end(): void {
         if (this._http) {
@@ -161,6 +217,11 @@ export class HttpIntegration extends Integrations implements IIntegration {
         if (this._https) {
             shimmer.unwrap(this._https, 'request');
             logger.info(`unwrap https integration`, this.namespace)
+        }
+
+        if (this._dns) {
+            shimmer.unwrap(this._dns, 'lookup')
+            logger.info(`unwrap dns lookup`, this.namespace)
         }
     }
 }

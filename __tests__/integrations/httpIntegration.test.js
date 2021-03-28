@@ -3,7 +3,7 @@ const {Tracer} = require('rbi-nodejs-agent/dist/trace/Tracer');
 const {TracesLoader} = require('rbi-nodejs-agent/dist/trace/TracesLoader');
 const {
     requestWithHttp,
-    requestWithRequest,
+    requestWithSuperagent,
     requestWithAxios,
     clearEnvironmentVariables,
     RESPONSE_BODY
@@ -38,6 +38,7 @@ async function httpIntegrationProductionMode() {
         const {tracer} = beforeEach('correctly integrate with axios');
 
         const axiosResponse = await requestWithAxios();
+        console.log(axiosResponse.data);
 
         expect(tracer.traces.length).toBe(1)
         expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
@@ -75,15 +76,15 @@ async function httpIntegrationProductionMode() {
         afterEach()
     }
 
-    async function httpIntegrationTestRequest() {
-        const {tracer} = beforeEach('correctly integrate with request module');
-        const response = await requestWithRequest();
+    async function httpIntegrationTestSuperagent() {
+        const {tracer} = beforeEach('correctly integrate with superagent module');
+        const body = await requestWithSuperagent();
 
         expect(tracer.traces.length).toBe(1)
         expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
         expect(tracer.traces[0].operationType).toBe('RESPONSE')
         expect(tracer.traces[0].data).toBeDefined()
-        expect(JSON.parse(response)).toEqual(RESPONSE_BODY)
+        expect(body).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
@@ -107,7 +108,7 @@ async function httpIntegrationProductionMode() {
 
     await httpIntegrationTestAxios()
     await httpIntegrationTestHttp()
-    await httpIntegrationTestRequest()
+    await httpIntegrationTestSuperagent()
     await httpIntegrationTestAxiosHttps()
     await httpIntegrationTestMultipleRequestWithSamePath()
 }
@@ -142,11 +143,11 @@ async function httpIntegrationDebugMode() {
         afterEach()
     }
 
-    async function httpIntegrationTestWithRequest() {
+    async function httpIntegrationTestWithSuperagent() {
         beforeEach('correctly inject data and mock request module');
 
-        const axiosResponse = await requestWithRequest();
-        expect(axiosResponse).toEqual(RESPONSE_BODY)
+        const body = await requestWithSuperagent();
+        expect(body).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
@@ -154,20 +155,21 @@ async function httpIntegrationDebugMode() {
     async function httpIntegrationTestWithHttp() {
         beforeEach('correctly inject data and mock http native module');
 
-        const axiosResponse = await requestWithHttp();
-        expect(axiosResponse).toEqual(RESPONSE_BODY)
+        const httpResponse = await requestWithHttp();
+        expect(httpResponse).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
 
     await httpIntegrationTestAxios()
-    await httpIntegrationTestWithHttp()
-    await httpIntegrationTestWithRequest()
+    // await httpIntegrationTestWithSuperagent()
+    // await httpIntegrationTestWithHttp()
 }
 
 async function runTests() {
-    await httpIntegrationProductionMode()
+    // await httpIntegrationProductionMode()
     await httpIntegrationDebugMode()
+    console.log("======DONE======")
 }
 
 runTests().then().catch(e => {
