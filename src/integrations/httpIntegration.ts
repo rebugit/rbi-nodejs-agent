@@ -5,12 +5,10 @@ import {IIntegration} from "./index";
 import {Integrations} from "./integrations";
 import {IncomingHttpHeaders, IncomingMessage, RequestOptions} from "http";
 import {HttpMock} from "./mocks/http";
-import {URL} from "url";
 
 const url = require("url");
 const events = require("events");
 const shimmer = require("shimmer");
-const {stringify} = require('flatted');
 const {Trace} = require('../trace/Trace')
 const logger = require('../logger')
 
@@ -21,11 +19,6 @@ interface IHttpTraceData {
     statusMessage: string
 }
 
-interface IRequestOptions {
-    method?: string
-    path?: string
-}
-
 export class HttpIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
     private tracesLoader: TracesLoader;
@@ -33,7 +26,6 @@ export class HttpIntegration extends Integrations implements IIntegration {
     private readonly namespace: string;
     private _http: null;
     private _https: null;
-    private _dns: any;
 
     constructor() {
         super()
@@ -60,17 +52,6 @@ export class HttpIntegration extends Integrations implements IIntegration {
             shimmer.wrap(https, 'request', this.wrap());
             logger.info(`wrap https integration`, this.namespace)
         }
-
-        // const dns = this.require("dns");
-        // if (this.env === Environments.DEBUG && dns) {
-        //     this._dns = dns
-        //     shimmer.wrap(dns, 'lookup', this.wrapMockDns())
-        //     shimmer.wrap(dns, 'lookupService', this.wrapMockDns())
-        //     shimmer.wrap(dns, 'resolve', this.wrapMockDns())
-        //     shimmer.wrap(dns, 'resolveAny', this.wrapMockDns())
-        //     shimmer.wrap(dns, 'resolve4', this.wrapMockDns())
-        //     shimmer.wrap(dns, 'getServer', this.wrapMockDns())
-        // }
     }
 
     private getExtraFieldsFromRes(res: IncomingMessage, data: IHttpTraceData) {
@@ -103,6 +84,12 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 cb(Buffer.from(data.body))
             }
 
+            if (type === 'end') {
+                cb()
+            }
+        }
+        // @ts-ignore
+        resMock.once = function (type, cb) {
             if (type === 'end') {
                 cb()
             }
@@ -193,21 +180,6 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrapMockDns() {
-        const integration = this
-        return (lookup) => {
-            return function () {
-                console.log(arguments)
-                arguments[0] = '0.0.0.0'
-                arguments[2] = (...args) => {
-                    console.log(args)
-                }
-                return lookup.apply(this, arguments)
-            };
-        }
-    }
-
-
     end(): void {
         if (this._http) {
             shimmer.unwrap(this._http, 'request');
@@ -218,11 +190,16 @@ export class HttpIntegration extends Integrations implements IIntegration {
             shimmer.unwrap(this._https, 'request');
             logger.info(`unwrap https integration`, this.namespace)
         }
+    }
 
-        if (this._dns) {
-            shimmer.unwrap(this._dns, 'lookup')
-            logger.info(`unwrap dns lookup`, this.namespace)
+    private wrapGot() {
+        const integration = this
+        return (request) => {
+            return function () {
+                console.log("CALLED")
+            };
         }
+
     }
 }
 
