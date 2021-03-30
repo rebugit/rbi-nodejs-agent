@@ -3,13 +3,17 @@ const {Tracer} = require('rbi-nodejs-agent/dist/trace/Tracer');
 const {TracesLoader} = require('rbi-nodejs-agent/dist/trace/TracesLoader');
 const {
     requestWithHttp,
-    requestWithRequest,
+    requestWithSuperagent,
     requestWithAxios,
+    requestWithGot,
     clearEnvironmentVariables,
-    RESPONSE_BODY
+    RESPONSE_BODY,
+    REQUEST_BASE_URL,
+    PATH
 } = require("./utils");
 const {traces} = require('./data')
 const expect = require('expect')
+const axios = require("axios");
 
 /**
  * Jest does not preserve symlink making those type of tests fails
@@ -37,21 +41,8 @@ async function httpIntegrationProductionMode() {
     async function httpIntegrationTestAxios() {
         const {tracer} = beforeEach('correctly integrate with axios');
 
-        const axiosResponse = await requestWithAxios();
-
-        expect(tracer.traces.length).toBe(1)
-        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
-        expect(tracer.traces[0].operationType).toBe('RESPONSE')
-        expect(tracer.traces[0].data).toBeDefined()
-        expect(axiosResponse.data).toEqual(RESPONSE_BODY)
-
-        afterEach()
-    }
-
-    async function httpIntegrationTestAxiosHttps() {
-        const {tracer} = beforeEach('correctly integrate with axios via https');
-
         const axiosResponse = await requestWithAxios(true);
+        console.log(axiosResponse.data);
 
         expect(tracer.traces.length).toBe(1)
         expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
@@ -75,18 +66,32 @@ async function httpIntegrationProductionMode() {
         afterEach()
     }
 
-    async function httpIntegrationTestRequest() {
-        const {tracer} = beforeEach('correctly integrate with request module');
-        const response = await requestWithRequest();
+    async function httpIntegrationTestSuperagent() {
+        const {tracer} = beforeEach('correctly integrate with superagent module');
+        const body = await requestWithSuperagent();
 
         expect(tracer.traces.length).toBe(1)
         expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
         expect(tracer.traces[0].operationType).toBe('RESPONSE')
         expect(tracer.traces[0].data).toBeDefined()
-        expect(JSON.parse(response)).toEqual(RESPONSE_BODY)
+        expect(body).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
+
+    async function httpIntegrationTestGot() {
+        const {tracer} = beforeEach('correctly integrate with got module');
+        const body = await requestWithGot();
+
+        expect(tracer.traces.length).toBe(1)
+        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
+        expect(tracer.traces[0].operationType).toBe('RESPONSE')
+        expect(tracer.traces[0].data).toBeDefined()
+        expect(JSON.parse(body)).toEqual(RESPONSE_BODY)
+
+        afterEach()
+    }
+
 
     async function httpIntegrationTestMultipleRequestWithSamePath() {
         const {tracer} = beforeEach('correctly integrate with native http module and make parallel request');
@@ -107,8 +112,8 @@ async function httpIntegrationProductionMode() {
 
     await httpIntegrationTestAxios()
     await httpIntegrationTestHttp()
-    await httpIntegrationTestRequest()
-    await httpIntegrationTestAxiosHttps()
+    await httpIntegrationTestSuperagent()
+    await httpIntegrationTestGot()
     await httpIntegrationTestMultipleRequestWithSamePath()
 }
 
@@ -136,17 +141,22 @@ async function httpIntegrationDebugMode() {
     async function httpIntegrationTestAxios() {
         beforeEach('correctly inject data and mock axios');
 
-        const axiosResponse = await requestWithAxios();
+        axios.interceptors.request.use((config) => {
+            expect(config.url).toBe(`https://${REQUEST_BASE_URL}/${PATH}`)
+            return config;
+        });
+
+        const axiosResponse = await requestWithAxios(true);
         expect(axiosResponse.data).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
 
-    async function httpIntegrationTestWithRequest() {
+    async function httpIntegrationTestWithSuperagent() {
         beforeEach('correctly inject data and mock request module');
 
-        const axiosResponse = await requestWithRequest();
-        expect(axiosResponse).toEqual(RESPONSE_BODY)
+        const body = await requestWithSuperagent();
+        expect(body).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
@@ -154,20 +164,21 @@ async function httpIntegrationDebugMode() {
     async function httpIntegrationTestWithHttp() {
         beforeEach('correctly inject data and mock http native module');
 
-        const axiosResponse = await requestWithHttp();
-        expect(axiosResponse).toEqual(RESPONSE_BODY)
+        const httpResponse = await requestWithHttp();
+        expect(httpResponse).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
 
     await httpIntegrationTestAxios()
+    await httpIntegrationTestWithSuperagent()
     await httpIntegrationTestWithHttp()
-    await httpIntegrationTestWithRequest()
 }
 
 async function runTests() {
     await httpIntegrationProductionMode()
     await httpIntegrationDebugMode()
+    console.log("======DONE======")
 }
 
 runTests().then().catch(e => {

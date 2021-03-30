@@ -4,8 +4,10 @@ import {Readable} from "stream";
 import EventEmitter from "events";
 
 export class HttpMock {
-    mockRequest(_, callback): ClientRequest {
-        callback()
+    request(resmock, callback): ClientRequest {
+        process.nextTick(() => {
+            callback()
+        })
 
         return {
             aborted: false,
@@ -84,7 +86,12 @@ export class HttpMock {
             onSocket(socket: Socket): void {
             },        // @ts-ignore
             once(event: "drain" | "finish" | "response" | "drain" | "finish" | "timeout" | "pipe" | "upgrade" | "connect" | "unpipe" | "information" | "error" | string | symbol | "error" | "close" | "unpipe" | "socket" | "pipe" | "abort" | "close" | "continue", listener: (() => void) | ((response: IncomingMessage) => void) | ((src: Readable) => void) | ((response: IncomingMessage, socket: Socket, head: Buffer) => void) | ((info: InformationEvent) => void) | ((err: Error) => void) | ((...args: any[]) => void) | ((src: stream.Readable) => void) | ((socket: Socket) => void)): this {
-                return undefined;
+                if (event === 'response') {
+                    // @ts-ignore
+                    return listener(resmock);
+                }
+                // @ts-ignore
+                return undefined
             },
             pipe<T extends NodeJS.WritableStream>(destination: T, options?: { end?: boolean }): T {
                 return undefined;
@@ -132,14 +139,14 @@ export class HttpMock {
                 return false;
             },
             // @ts-ignore
-            on: function () {
+            on: function (type) {
             },
             end: function () {
             }
         }
     }
 
-    responseMockObject(): IncomingMessage {
+    response(): IncomingMessage {
         return {
             aborted: false,
             complete: false,
@@ -267,8 +274,8 @@ export class HttpMock {
         }
     }
 
-    createResponseMock(emitter: EventEmitter): IncomingMessage{
-        const res = this.responseMockObject()
+    createResponse(emitter: EventEmitter): IncomingMessage {
+        const res = this.response()
         const resMock = {}
         Object.keys(res).forEach((key: string) => {
             resMock[key] = res[key]

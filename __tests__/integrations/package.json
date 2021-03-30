@@ -12,9 +12,9 @@
   "dependencies": {
     "axios": "^0.21.1",
     "expect": "^26.6.2",
+    "got": "^11.8.2",
     "knex": "^0.21.19",
     "pg": "^8.5.1",
-    "request": "^2.88.2",
     "sequelize": "^6.5.0",
     "superagent": "^6.1.0"
   }

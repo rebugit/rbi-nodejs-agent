@@ -105,19 +105,11 @@ class RebugitSDK {
                 }
             },
 
-            errorHandler: ({Sentry}) => (err, req, res, next) => {
+            errorHandler: () => (err, req, res, next) => {
                 this._endIntegrations()
 
                 if (this.env === Environments.DEBUG) {
                     return next(err)
-                }
-
-                /**
-                 * Temporary Sentry integration
-                 * TODO: remove this
-                 */
-                if (Sentry) {
-                    Sentry.setTag("rebugit-traceId", this.tracer.traceId);
                 }
 
                 const errorDomain = new ErrorDomain(this.tracer.traceId, err);
