@@ -134,7 +134,7 @@ class RebugitSDK {
                     this._initIntegrations(tracer)
 
                     if (this.env === Environments.DEBUG) {
-                        const {context, event} = lambdaIntegration.extractRequest();
+                        const {context, event} = await lambdaIntegration.extractRequest();
                         return func(event, context)
                     } else {
                         lambdaIntegration.captureRequest({event, context})

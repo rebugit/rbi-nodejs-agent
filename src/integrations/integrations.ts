@@ -24,9 +24,15 @@ export class Integrations {
         }
     }
 
-    protected getCorrelationId = (method: string, path: string): string => {
+    protected getCorrelationId = (method: string, host: string, path: string, headers: { [key: string]: string }): string => {
+        if (host.includes('amazonaws.com')) {
+            this._counter++
+            const target = headers['X-Amz-Target'];
+            return `${method}_${host}${path || ''}_${target}_${this._counter}`
+        }
+
         this._counter++
-        return `${method}_${path}_${this._counter}`
+        return `${method}_${host}${path}_${this._counter}`
     }
 
     protected hashSha1 = (value: string): string => {

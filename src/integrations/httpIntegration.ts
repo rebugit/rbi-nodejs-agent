@@ -26,12 +26,14 @@ export class HttpIntegration extends Integrations implements IIntegration {
     private readonly namespace: string;
     private _http: null;
     private _https: null;
+    private readCounter: number;
 
     constructor() {
         super()
         this.namespace = 'httpIntegration'
         this._http = null
         this._https = null
+        this.readCounter = 0
     }
 
     public init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -70,13 +72,26 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private getRequestObj(httpMock: HttpMock, correlationId: string) {
+    private getMockedRequestObj(httpMock: HttpMock, correlationId: string) {
         const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
-        logger.info(`correlationId: ${correlationId}`, this.namespace)
         logger.info(`trace loaded: ${data}`, this.namespace)
-
+        const __self = this
         const emitter = new events.EventEmitter()
         const resMock = httpMock.createResponse(emitter);
+
+        /**
+         * This is for support of readable stream, usually the caller will
+         * call in loop the .read method until EOF (null value). This counter is an hack
+         * to return null and stop the iteration.
+         */
+        resMock.read = function () {
+            if (__self.readCounter === 1) {
+                __self.readCounter = 0
+                return null
+            }
+            __self.readCounter++
+            return Buffer.from(data.body)
+        }
 
         // @ts-ignore
         resMock.on = function (type, cb) {
@@ -87,9 +102,18 @@ export class HttpIntegration extends Integrations implements IIntegration {
             if (type === 'end') {
                 cb()
             }
+
+            if (type === 'readable') {
+                cb()
+            }
+
+            if (type === 'headers'){
+                cb(200, {}, "OK")
+            }
         }
         // @ts-ignore
         resMock.once = function (type, cb) {
+            console.log(type)
             if (type === 'end') {
                 cb()
             }
@@ -109,9 +133,13 @@ export class HttpIntegration extends Integrations implements IIntegration {
             return function () {
                 let options: RequestOptions | any = arguments[0];
                 const method = (options.method || 'GET').toUpperCase();
+                const host = options.hostname || options.host || 'localhost'
                 options = typeof options === 'string' ? url.parse(options) : options;
                 let path = options.path || options.pathname || '/';
-                const correlationId = integration.getCorrelationId(method, path);
+                const headers = options.headers
+                const correlationId = integration.getCorrelationId(method, host, path, headers);
+
+                logger.info(`correlation id: ${correlationId}`, integration.namespace)
 
                 let originalCallback
                 if (options.callback) {
@@ -119,7 +147,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 } else { // @ts-ignore
                     if (typeof arguments[1] === "function") {
                         originalCallback = arguments[1]
-                    } else if (arguments[2] && typeof arguments[2] === 'function'){
+                    } else if (arguments[2] && typeof arguments[2] === 'function') {
                         originalCallback = arguments[2]
                     }
                 }
@@ -127,7 +155,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 try {
                     if (integration.env === 'debug') {
                         const httpMock = new HttpMock()
-                        const resMock = integration.getRequestObj(httpMock, correlationId);
+                        const resMock = integration.getMockedRequestObj(httpMock, correlationId);
 
                         const wrappedCallback = () => {
                             originalCallback(resMock)
