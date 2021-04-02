@@ -1,7 +1,5 @@
 const http = require("http");
 const {Sequelize} = require('sequelize')
-const Sentry = require('@sentry/node')
-// This package must be imported even if there are no methods to require
 const {RebugitSDK} = require('rbi-nodejs-agent');
 const {Pool} = require('pg')
 const axios = require('axios')
@@ -11,32 +9,24 @@ const express = require('express')
 const request = require('request')
 const app = express()
 const port = 9000
-
-function myCustomIntegrationCallback(env, close, getData, wrap) {
-    wrap(module, 'name', function (original) {
-        // integration logic
-        if (env === 'debug'){
-            // inject logic
-        }
-
-        // extract logic
-    })
-
-    return {
-        module: {},
-        name: 'cors'
-    }
-}
-
+const AWS = require('aws-sdk');
 const Rebugit = new RebugitSDK({
     apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiIxNWY5MjJlNy0zZGJiLTQwMWMtOTJiOS1mODE3ODZlODExMmMiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.EsXiWTOabQuvEbjlBDZf_F8TMKz036xUjchpsGNBjCs',
-    // customIntegrations: {'myCustomIntegration': myCustomIntegrationCallback}
 })
 
-Sentry.init({
-    dsn: "https://9cd1dff7aff84daeb2bdf110e9aa8d80@o260622.ingest.sentry.io/5636379",
+const dynamoDb = new AWS.DynamoDB.DocumentClient({
+    region: 'ap-southeast-1'
 });
 
+const getForecast = async () => {
+    const response = await dynamoDb.get({
+        TableName: 'rebugit-nodejs-lambda-example-dev',
+        Key: {
+            id: '155ed150-9295-11eb-8c38-5fede2f3bc0d'
+        }
+    }).promise()
+    return response.Item
+}
 
 const isSequelize = false
 const isAxios = true
@@ -85,7 +75,7 @@ const callExternalAPI = async () => {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
         };
 
         return new Promise((resolve, reject) => {
@@ -136,6 +126,7 @@ const doStuff = async (req, res, next) => {
     }
 
     const magicNumber = 18 / (length - num)
+    // const newVar = await getForecast();
 
     res.status(200).send({
         magicNumber
@@ -144,17 +135,11 @@ const doStuff = async (req, res, next) => {
 
 app.use(cors())
 app.use(bodyParser.json())
-app.use(Sentry.Handlers.requestHandler());
 app.use(Rebugit.Handlers().requestHandler())
 app.post('/', doStuff)
 app.post('/send', doStuff)
-
-app.use(Rebugit.Handlers().errorHandler({Sentry}))
-app.use(Sentry.Handlers.errorHandler());
-
+app.use(Rebugit.Handlers().errorHandler())
 app.use(function onError(err, req, res, next) {
-    // The error id is attached to `res.sentry` to be returned
-    // and optionally displayed to the user for support.
     console.log(err.message, err.stack)
     res.statusCode = 500;
     res.send(err.message)

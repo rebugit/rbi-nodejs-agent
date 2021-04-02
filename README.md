@@ -34,3 +34,28 @@ app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`)
 })
 ```
+
+#### AWS Lambda
+
+```js
+'use strict';
+
+const {RebugitSDK} = require('rbi-nodejs-agent');
+
+const rbi = new RebugitSDK({
+    apiKey: 'your-api-key'
+})
+
+module.exports.getWeather = rbi.AWSLambda().lambdaHandler(async (event) => {
+    const data = JSON.parse(event.body);
+    
+    return {
+        statusCode: 200,
+        body: "Hey, Hi Mark!",
+        headers: {
+            "Access-Control-Allow-Origin": "*"
+        },
+    };
+})
+
+```

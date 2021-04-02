@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import {OperationsType} from "./constants";
 
 export class Integrations {
     protected env: any;
@@ -33,6 +34,15 @@ export class Integrations {
 
         this._counter++
         return `${method}_${host}${path}_${this._counter}`
+    }
+
+    protected getOperationType = (host: string): string => {
+        if (host.includes('amazonaws.com')) {
+            const service = host.split(".")[0];
+            return service.toUpperCase()
+        }
+
+        return OperationsType.RESPONSE
     }
 
     protected hashSha1 = (value: string): string => {

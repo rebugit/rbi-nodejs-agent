@@ -237,14 +237,14 @@ describe("LambdaIntegration", function () {
                 expect(mockCallback).toHaveBeenCalledWith(null, response);
             })
 
-            it('should extract body', function () {
+            it('should extract body', async function () {
                 tracesLoader.load([{
                     data: stringify({context: {}, event: {body: 'Hey, Hi Mark!'}}),
                     operationType: OperationsType.LAMBDA,
                     correlationId: CorrelationIds.LAMBDA_REQUEST
                 }])
 
-                const data = lambdaIntegration.extractRequest();
+                const data = await lambdaIntegration.extractRequest();
 
                 expect(data.event.body).toBe('Hey, Hi Mark!')
                 expect(data.context).toBeDefined()

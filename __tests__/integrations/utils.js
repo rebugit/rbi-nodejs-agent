@@ -59,6 +59,44 @@ const requestWithHttp = (isHttps = false) => new Promise((resolve, reject) => {
     req.end();
 })
 
+const requestWithHttpStreams = async () => new Promise((resolve, reject) => {
+    const options = {
+        host: REQUEST_BASE_URL,
+        path: `/${PATH}`,
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    };
+
+    const req = https.request(options, (res) => {
+        console.log(`${options.host} : ${res.statusCode}`);
+        res.setEncoding('utf8');
+        let output = '';
+
+        res.on("readable", () => {
+            let chunk;
+            while(null !== (chunk = res.read())){
+                console.log(chunk)
+                output += chunk;
+            }
+        });
+
+        res.on('end', () => {
+            let obj = JSON.parse(output);
+            resolve(obj);
+        });
+    });
+
+    req.on('error', (err) => {
+        console.log(err.message)
+        reject(err)
+    });
+
+    req.end();
+})
+
+
 const requestWithSuperagent = async () => {
     const url = `https://${REQUEST_BASE_URL}/${PATH}`
     const response = await superagent('get', url)
@@ -78,7 +116,7 @@ const requestWithAxios = async (isHttps = false) => {
 }
 
 const requestWithGot = async () => {
-    const response = await got(`https://${REQUEST_BASE_URL}/${PATH}`)
+    const response = await got(`https://${REQUEST_BASE_URL}/${PATH}`, {responseType: 'json'})
     return response.body
 }
 
@@ -145,6 +183,7 @@ module.exports = {
     requestWithHttp,
     requestWithGot,
     requestWithAxios,
+    requestWithHttpStreams,
     clearEnvironmentVariables,
     pgQuery,
     pgPoolQuery,

@@ -5,6 +5,7 @@ import {IIntegration} from "./index";
 import {Integrations} from "./integrations";
 import {IncomingHttpHeaders, IncomingMessage, RequestOptions} from "http";
 import {HttpMock} from "./mocks/http";
+import {ITrace} from "../trace/Trace";
 
 const url = require("url");
 const events = require("events");
@@ -83,6 +84,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
          * This is for support of readable stream, usually the caller will
          * call in loop the .read method until EOF (null value). This counter is an hack
          * to return null and stop the iteration.
+         * Used by: got, aws-sdk
          */
         resMock.read = function () {
             if (__self.readCounter === 1) {
@@ -104,16 +106,27 @@ export class HttpIntegration extends Integrations implements IIntegration {
             }
 
             if (type === 'readable') {
-                cb()
+                let __self = this
+
+                if (this && this.request) {
+                    /**
+                     * This particular integration is for "got", this package trigger the read operation
+                     * only if the Symbol "kTriggerRead" is set to true
+                     */
+                    const kTriggerReadSymbol = Object.getOwnPropertySymbols(this.request)[5]
+                    this.request[kTriggerReadSymbol] = true
+                    __self = this.request
+                }
+
+                cb.call(__self)
             }
 
             if (type === 'headers'){
-                cb(200, {}, "OK")
+                cb(data.statusCode, data.headers, data.statusMessage)
             }
         }
         // @ts-ignore
         resMock.once = function (type, cb) {
-            console.log(type)
             if (type === 'end') {
                 cb()
             }
@@ -184,9 +197,10 @@ export class HttpIntegration extends Integrations implements IIntegration {
 
                                 integration.getExtraFieldsFromRes(res, data)
 
-                                const obj = {
+                                const obj: ITrace = {
                                     data,
                                     correlationId,
+                                    operationType: integration.getOperationType(host)
                                 }
 
                                 const trace = new Trace(obj);
@@ -218,16 +232,6 @@ export class HttpIntegration extends Integrations implements IIntegration {
             shimmer.unwrap(this._https, 'request');
             logger.info(`unwrap https integration`, this.namespace)
         }
-    }
-
-    private wrapGot() {
-        const integration = this
-        return (request) => {
-            return function () {
-                console.log("CALLED")
-            };
-        }
-
     }
 }
 
