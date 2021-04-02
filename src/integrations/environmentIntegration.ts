@@ -19,7 +19,7 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
     }
 
     end(): void {
-        // no-op there no clean-up needed
+        // no-op no clean-up needed
     }
 
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {

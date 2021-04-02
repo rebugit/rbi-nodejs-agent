@@ -45,7 +45,7 @@ async function httpIntegrationProductionMode() {
         console.log(axiosResponse.data);
 
         expect(tracer.traces.length).toBe(1)
-        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
+        expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_1')
         expect(tracer.traces[0].operationType).toBe('RESPONSE')
         expect(tracer.traces[0].data).toBeDefined()
         expect(axiosResponse.data).toEqual(RESPONSE_BODY)
@@ -58,7 +58,7 @@ async function httpIntegrationProductionMode() {
         const response = await requestWithHttp(false);
 
         expect(tracer.traces.length).toBe(1)
-        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
+        expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_1')
         expect(tracer.traces[0].operationType).toBe('RESPONSE')
         expect(tracer.traces[0].data).toBeDefined()
         expect(response).toEqual(RESPONSE_BODY)
@@ -71,7 +71,7 @@ async function httpIntegrationProductionMode() {
         const body = await requestWithSuperagent();
 
         expect(tracer.traces.length).toBe(1)
-        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
+        expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_1')
         expect(tracer.traces[0].operationType).toBe('RESPONSE')
         expect(tracer.traces[0].data).toBeDefined()
         expect(body).toEqual(RESPONSE_BODY)
@@ -84,10 +84,10 @@ async function httpIntegrationProductionMode() {
         const body = await requestWithGot();
 
         expect(tracer.traces.length).toBe(1)
-        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
+        expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_1')
         expect(tracer.traces[0].operationType).toBe('RESPONSE')
         expect(tracer.traces[0].data).toBeDefined()
-        expect(JSON.parse(body)).toEqual(RESPONSE_BODY)
+        expect(body).toEqual(RESPONSE_BODY)
 
         afterEach()
     }
@@ -102,10 +102,9 @@ async function httpIntegrationProductionMode() {
         ])
 
         expect(tracer.traces.length).toBe(3)
-        expect(tracer.traces[0].correlationId).toBe('GET_/todos/1_1')
-        expect(tracer.traces[1].correlationId).toBe('GET_/todos/1_2')
-        expect(tracer.traces[2].correlationId).toBe('GET_/todos/1_3')
-
+        expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_1')
+        expect(tracer.traces[1].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_2')
+        expect(tracer.traces[2].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_3')
 
         afterEach()
     }
@@ -161,6 +160,16 @@ async function httpIntegrationDebugMode() {
         afterEach()
     }
 
+    async function httpIntegrationTestWithGot() {
+        beforeEach('correctly inject data and mock got module');
+
+        const httpResponse = await requestWithGot();
+        expect(httpResponse).toEqual(RESPONSE_BODY)
+
+        afterEach()
+    }
+
+
     async function httpIntegrationTestWithHttp() {
         beforeEach('correctly inject data and mock http native module');
 
@@ -172,13 +181,14 @@ async function httpIntegrationDebugMode() {
 
     await httpIntegrationTestAxios()
     await httpIntegrationTestWithSuperagent()
+    await httpIntegrationTestWithGot()
     await httpIntegrationTestWithHttp()
 }
 
 async function runTests() {
     await httpIntegrationProductionMode()
     await httpIntegrationDebugMode()
-    console.log("======DONE======")
+    console.log("======DONE======\n\n")
 }
 
 runTests().then().catch(e => {

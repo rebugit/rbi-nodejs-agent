@@ -133,7 +133,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
 
                 /**
                  * Connect method can have a callback.
-                 * in the Pool class even though we call await pool.connect(),
+                 * In the Pool class even though we call await pool.connect(),
                  * internally Pg will call the connect method with a callback
                  */
                 if (arguments.length) {

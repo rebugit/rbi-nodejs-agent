@@ -5,6 +5,7 @@ import {IIntegration} from "./index";
 import {Integrations} from "./integrations";
 import {IncomingHttpHeaders, IncomingMessage, RequestOptions} from "http";
 import {HttpMock} from "./mocks/http";
+import {ITrace} from "../trace/Trace";
 
 const url = require("url");
 const events = require("events");
@@ -26,12 +27,14 @@ export class HttpIntegration extends Integrations implements IIntegration {
     private readonly namespace: string;
     private _http: null;
     private _https: null;
+    private readCounter: number;
 
     constructor() {
         super()
         this.namespace = 'httpIntegration'
         this._http = null
         this._https = null
+        this.readCounter = 0
     }
 
     public init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -70,13 +73,27 @@ export class HttpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private getRequestObj(httpMock: HttpMock, correlationId: string) {
+    private getMockedRequestObj(httpMock: HttpMock, correlationId: string) {
         const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
-        logger.info(`correlationId: ${correlationId}`, this.namespace)
         logger.info(`trace loaded: ${data}`, this.namespace)
-
+        const __self = this
         const emitter = new events.EventEmitter()
         const resMock = httpMock.createResponse(emitter);
+
+        /**
+         * This is for support of readable stream, usually the caller will
+         * call in loop the .read method until EOF (null value). This counter is an hack
+         * to return null and stop the iteration.
+         * Used by: got, aws-sdk
+         */
+        resMock.read = function () {
+            if (__self.readCounter === 1) {
+                __self.readCounter = 0
+                return null
+            }
+            __self.readCounter++
+            return Buffer.from(data.body)
+        }
 
         // @ts-ignore
         resMock.on = function (type, cb) {
@@ -86,6 +103,26 @@ export class HttpIntegration extends Integrations implements IIntegration {
 
             if (type === 'end') {
                 cb()
+            }
+
+            if (type === 'readable') {
+                let __self = this
+
+                if (this && this.request) {
+                    /**
+                     * This particular integration is for "got", this package trigger the read operation
+                     * only if the Symbol "kTriggerRead" is set to true
+                     */
+                    const kTriggerReadSymbol = Object.getOwnPropertySymbols(this.request)[5]
+                    this.request[kTriggerReadSymbol] = true
+                    __self = this.request
+                }
+
+                cb.call(__self)
+            }
+
+            if (type === 'headers'){
+                cb(data.statusCode, data.headers, data.statusMessage)
             }
         }
         // @ts-ignore
@@ -109,9 +146,13 @@ export class HttpIntegration extends Integrations implements IIntegration {
             return function () {
                 let options: RequestOptions | any = arguments[0];
                 const method = (options.method || 'GET').toUpperCase();
+                const host = options.hostname || options.host || 'localhost'
                 options = typeof options === 'string' ? url.parse(options) : options;
                 let path = options.path || options.pathname || '/';
-                const correlationId = integration.getCorrelationId(method, path);
+                const headers = options.headers
+                const correlationId = integration.getCorrelationId(method, host, path, headers);
+
+                logger.info(`correlation id: ${correlationId}`, integration.namespace)
 
                 let originalCallback
                 if (options.callback) {
@@ -119,7 +160,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 } else { // @ts-ignore
                     if (typeof arguments[1] === "function") {
                         originalCallback = arguments[1]
-                    } else if (arguments[2] && typeof arguments[2] === 'function'){
+                    } else if (arguments[2] && typeof arguments[2] === 'function') {
                         originalCallback = arguments[2]
                     }
                 }
@@ -127,7 +168,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 try {
                     if (integration.env === 'debug') {
                         const httpMock = new HttpMock()
-                        const resMock = integration.getRequestObj(httpMock, correlationId);
+                        const resMock = integration.getMockedRequestObj(httpMock, correlationId);
 
                         const wrappedCallback = () => {
                             originalCallback(resMock)
@@ -156,9 +197,10 @@ export class HttpIntegration extends Integrations implements IIntegration {
 
                                 integration.getExtraFieldsFromRes(res, data)
 
-                                const obj = {
+                                const obj: ITrace = {
                                     data,
                                     correlationId,
+                                    operationType: integration.getOperationType(host)
                                 }
 
                                 const trace = new Trace(obj);
@@ -190,16 +232,6 @@ export class HttpIntegration extends Integrations implements IIntegration {
             shimmer.unwrap(this._https, 'request');
             logger.info(`unwrap https integration`, this.namespace)
         }
-    }
-
-    private wrapGot() {
-        const integration = this
-        return (request) => {
-            return function () {
-                console.log("CALLED")
-            };
-        }
-
     }
 }
 

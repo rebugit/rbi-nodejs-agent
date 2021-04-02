@@ -105,3 +105,5 @@ dist
 
 .idea
 .DS_store
+
+__tests__/integrations/debug.js

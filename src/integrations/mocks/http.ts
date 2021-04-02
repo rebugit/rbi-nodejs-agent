@@ -139,7 +139,7 @@ export class HttpMock {
                 return false;
             },
             // @ts-ignore
-            on: function (type) {
+            on: function (type, cb) {
             },
             end: function () {
             }
@@ -219,6 +219,7 @@ export class HttpMock {
             },
             // @ts-ignore
             pipe(destination, options?: { end?: boolean }): T {
+                console.log("PIPE response")
                 return undefined;
             },
             // @ts-ignore

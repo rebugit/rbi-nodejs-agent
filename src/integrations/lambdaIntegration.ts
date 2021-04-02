@@ -46,7 +46,9 @@ export class LambdaIntegration extends Integrations {
         this.tracer.add(trace.trace())
     }
 
-    extractRequest(): ILambdaData {
+    async extractRequest(): Promise<ILambdaData> {
+        const traces = await this.api.findByTraceId(process.env.REBUGIT_TRACE_ID);
+        this.tracesLoader.load(traces)
         return this.tracesLoader.get<ILambdaData>(CorrelationIds.LAMBDA_REQUEST);
     }
 
