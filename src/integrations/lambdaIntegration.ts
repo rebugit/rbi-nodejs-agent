@@ -5,7 +5,7 @@ import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {Callback, Context} from "aws-lambda";
 import {ErrorDomain} from "../trace/ErrorDomain";
-import {ITraceServiceApi, TraceServiceApi} from "../trace/Api";
+import {ITraceServiceApi} from "../trace/Api";
 import {Integrations} from "./integrations";
 
 const logger = require('../logger')
@@ -46,9 +46,7 @@ export class LambdaIntegration extends Integrations {
         this.tracer.add(trace.trace())
     }
 
-    async extractRequest(): Promise<ILambdaData> {
-        const traces = await this.api.findByTraceId(process.env.REBUGIT_TRACE_ID);
-        this.tracesLoader.load(traces)
+    extractRequest(): ILambdaData {
         return this.tracesLoader.get<ILambdaData>(CorrelationIds.LAMBDA_REQUEST);
     }
 

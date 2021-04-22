@@ -5,6 +5,7 @@ import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegrationConfig} from "../config";
 import {Trace} from "../trace/Trace";
 import {OperationsType} from "./constants";
+import {Environments} from "../sharedKernel/constants";
 
 const logger = require('../logger')
 
@@ -25,7 +26,7 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
         this.configuration = config || {}
 
-        if (this.env === 'debug') {
+        if (this.env === Environments.DEBUG) {
             this.cleanEnvironment()
             const data = tracesLoader.get<{ [key: string]: string }>(OperationsType.ENVIRONMENT);
             logger.info(`trace loaded: ${data}`, this.namespace)

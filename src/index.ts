@@ -4,7 +4,7 @@ import {TracesLoader} from "./trace/TracesLoader";
 import {IGlobalConfig} from "./config";
 import {CustomIntegration} from "./integrations/customIntegration";
 import {Tracer} from "./trace/Tracer";
-import {Environments} from "./sharedKernel/constants";
+import {CorrelationIds, Environments} from "./sharedKernel/constants";
 import {Callback, Context} from "aws-lambda"
 import {LambdaIntegration} from "./integrations/lambdaIntegration";
 
@@ -101,6 +101,7 @@ class RebugitSDK {
                     this._initIntegrations(tracer)
                     const span = handlerIntegration.getTrace(tracer.traceId, req);
                     tracer.add(span)
+                    res.setHeader('x-rebugit-traceid', tracer.traceId)
                     next()
                 }
             },
@@ -131,12 +132,15 @@ class RebugitSDK {
                 logger.info(`init lambda handler with traceId: ${tracer.traceId}`)
 
                 return async (event: any, context: Context, callback: Callback) => {
-                    this._initIntegrations(tracer)
-
                     if (this.env === Environments.DEBUG) {
-                        const {context, event} = await lambdaIntegration.extractRequest();
+                        const traces = await this.api.findByTraceId(process.env.REBUGIT_TRACE_ID);
+                        this.tracesLoader.load(traces)
+
+                        this._initIntegrations(tracer)
+                        const {context, event} = lambdaIntegration.extractRequest();
                         return func(event, context)
                     } else {
+                        this._initIntegrations(tracer)
                         lambdaIntegration.captureRequest({event, context})
                     }
 
