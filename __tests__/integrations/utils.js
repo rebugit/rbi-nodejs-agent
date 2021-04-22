@@ -5,7 +5,11 @@ const superagent = require('superagent')
 const got = require('got')
 const axios = require("axios");
 const {Sequelize} = require("sequelize");
-const {Client, Pool} = require('pg')
+const {Client, Pool} = require('pg');
+const AWS = require('aws-sdk');
+const dynamoDb = new AWS.DynamoDB.DocumentClient({
+    region: 'ap-southeast-1'
+});
 
 const REQUEST_BASE_URL = 'jsonplaceholder.typicode.com'
 const PATH = 'todos/1'
@@ -76,7 +80,7 @@ const requestWithHttpStreams = async () => new Promise((resolve, reject) => {
 
         res.on("readable", () => {
             let chunk;
-            while(null !== (chunk = res.read())){
+            while (null !== (chunk = res.read())) {
                 console.log(chunk)
                 output += chunk;
             }
@@ -119,6 +123,41 @@ const requestWithGot = async () => {
     const response = await got(`https://${REQUEST_BASE_URL}/${PATH}`, {responseType: 'json'})
     return response.body
 }
+
+const postRequestWithGot = async () => {
+    const response = await got.post(`https://${REQUEST_BASE_URL}/${PATH}`, {
+        json: {hello: 'world'},
+        responseType: 'json'
+    })
+    return response.body
+}
+
+const postRequestWithAWSSDK = async () => {
+    const timestamp = new Date().getTime();
+    const params = {
+        TableName: 'my-test-table',
+        Item: {
+            id: '123',
+            data: {hello: 'world'},
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        },
+    };
+
+    return dynamoDb.put(params).promise()
+};
+
+const getRequestWithAWSSDK = async () => {
+    const params = {
+        TableName: 'my-test-table',
+        Key: {
+            id: '123'
+        }
+    };
+
+    return dynamoDb.get(params).promise()
+}
+
 
 const sequelizeQuery = async (value) => {
     const sequelize = new Sequelize(DB_CONNECTION_URI, {
@@ -190,6 +229,9 @@ module.exports = {
     sequelizeQuery,
     sha1,
     knexQuery,
+    postRequestWithAWSSDK,
+    getRequestWithAWSSDK,
+    postRequestWithGot,
     DB_QUERY,
     REQUEST_BASE_URL,
     PATH,

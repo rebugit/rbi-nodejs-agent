@@ -7,6 +7,8 @@ const {
     requestWithAxios,
     requestWithGot,
     clearEnvironmentVariables,
+    postRequestWithAWSSDK,
+    getRequestWithAWSSDK,
     RESPONSE_BODY,
     REQUEST_BASE_URL,
     PATH
@@ -14,6 +16,8 @@ const {
 const {traces} = require('./data')
 const expect = require('expect')
 const axios = require("axios");
+const {dynamodbResponseBody} = require("./data");
+const {postRequestWithGot} = require("./utils");
 
 /**
  * Jest does not preserve symlink making those type of tests fails
@@ -169,7 +173,6 @@ async function httpIntegrationDebugMode() {
         afterEach()
     }
 
-
     async function httpIntegrationTestWithHttp() {
         beforeEach('correctly inject data and mock http native module');
 
@@ -179,10 +182,22 @@ async function httpIntegrationDebugMode() {
         afterEach()
     }
 
+    async function httpIntegrationTestWithAWSSDKDoubleRequest() {
+        beforeEach('correctly inject data and mock aws sdk request for two times');
+
+        await postRequestWithAWSSDK();
+
+        const response = await getRequestWithAWSSDK();
+        expect(response).toEqual(dynamodbResponseBody)
+
+        afterEach();
+    }
+
     await httpIntegrationTestAxios()
     await httpIntegrationTestWithSuperagent()
     await httpIntegrationTestWithGot()
     await httpIntegrationTestWithHttp()
+    await httpIntegrationTestWithAWSSDKDoubleRequest();
 }
 
 async function runTests() {
