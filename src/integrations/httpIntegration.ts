@@ -87,6 +87,10 @@ export class HttpIntegration extends Integrations implements IIntegration {
          * Used by: got, aws-sdk
          */
         resMock.read = function () {
+            /**
+             * Somehow aws-sdk calls this method only one time
+             */
+
             if (__self.readCounter === 1) {
                 __self.readCounter = 0
                 return null
@@ -102,6 +106,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
             }
 
             if (type === 'end') {
+                __self.readCounter = 0
                 cb()
             }
 
@@ -128,6 +133,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
         // @ts-ignore
         resMock.once = function (type, cb) {
             if (type === 'end') {
+                __self.readCounter = 0
                 cb()
             }
         }
@@ -145,7 +151,14 @@ export class HttpIntegration extends Integrations implements IIntegration {
         return (request) => {
             return function () {
                 let options: RequestOptions | any = arguments[0];
-                const method = (options.method || 'GET').toUpperCase();
+
+                let method = ''
+                if (options.method) {
+                    method = options.method.toUpperCase();
+                } else {
+                    method = arguments[1].method;
+                }
+
                 const host = options.hostname || options.host || 'localhost'
                 options = typeof options === 'string' ? url.parse(options) : options;
                 let path = options.path || options.pathname || '/';
