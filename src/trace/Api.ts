@@ -111,16 +111,15 @@ export class TraceServiceApi implements ITraceServiceApi {
                     return reject(new Error('statusCode=' + res.statusCode));
                 }
 
-                let body = [];
+                let data = '';
                 res.on('data', function (chunk) {
-                    body.push(chunk);
+                    data += chunk;
                 });
 
                 res.on('end', function () {
                     let parsedBody: T
                     try {
-                        // @ts-ignore
-                        parsedBody = JSON.parse(body);
+                        parsedBody = JSON.parse(data);
                     } catch (e) {
                         reject(e);
                     }
