@@ -1,6 +1,8 @@
 import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegrationConfig} from "../config";
+import {MongodbIntegration} from "./mongodbIntegration";
+import {MysqlIntegration} from "./mysqlIntegration";
 
 const {PostgresIntegration} = require("./postgresIntegration");
 const {HttpIntegration} = require("./httpIntegration");
@@ -14,5 +16,7 @@ export interface IIntegration {
 module.exports = {
     Http: HttpIntegration,
     Pg: PostgresIntegration,
-    Env: EnvironmentIntegration
+    Env: EnvironmentIntegration,
+    Mongo: MongodbIntegration,
+    Mysql: MysqlIntegration,
 }

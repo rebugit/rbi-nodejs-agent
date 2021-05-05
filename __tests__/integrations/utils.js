@@ -7,6 +7,10 @@ const axios = require("axios");
 const {Sequelize} = require("sequelize");
 const {Client, Pool} = require('pg');
 const AWS = require('aws-sdk');
+const MongoClient = require('mongodb').MongoClient;
+const mongo = require('mongodb');
+const mysql = require('mysql');
+
 const dynamoDb = new AWS.DynamoDB.DocumentClient({
     region: 'ap-southeast-1'
 });
@@ -203,6 +207,56 @@ const knexQuery = async (value) => {
     return res.rows[0].result
 }
 
+const mysqlQuery = async (...args) => {
+    return new Promise((resolve, reject) => {
+        const connection = mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            database: 'mysql',
+            password: 'mysql',
+        });
+
+        connection.connect(err => {
+            if (err) {
+                console.log("Connection", err.message)
+                return;
+            }
+            console.log('connected as id ' + connection.threadId);
+        });
+
+        connection.query(...args, (error, results, fields) => {
+            if (error) {
+                return reject(error)
+            }
+
+            connection.end((err) => {
+                if (err) {
+                    // Resolve even though there is an error.
+                    return reject(err);
+                }
+                return resolve(results);
+            });
+        });
+    });
+}
+
+const mongodb = async () => {
+    const url = 'mongodb://localhost:27017';
+    const dbName = 'testdb';
+    const client = new MongoClient(url);
+    await client.connect();
+    console.log('Connected successfully to server');
+
+    const db = client.db(dbName);
+    const collection = db.collection('documents');
+    await collection.insertMany([{a: 1}, {a: 2}, {a: 3}])
+    const result = await collection.find({}).toArray();
+    await collection.drop();
+    await client.close();
+
+    return result
+}
+
 const sha1 = (value) => {
     const hash = crypto.createHash('sha1')
     hash.update(value)
@@ -232,6 +286,8 @@ module.exports = {
     postRequestWithAWSSDK,
     getRequestWithAWSSDK,
     postRequestWithGot,
+    mongodb,
+    mysqlQuery,
     DB_QUERY,
     REQUEST_BASE_URL,
     PATH,
