@@ -6,6 +6,7 @@ import {FieldDef, QueryResult} from "pg";
 import {Trace} from "../trace/Trace";
 import {PgMock} from "./mocks/pg";
 import {Environments} from "../sharedKernel/constants";
+import {OperationsType} from "./constants";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -206,7 +207,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             this.getExtraFieldsFromRes(value, data)
 
             const trace = new Trace({
-                operationType: 'QUERY',
+                operationType: OperationsType.POSTGRES_QUERY,
                 correlationId,
                 data
             })

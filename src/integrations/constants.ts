@@ -2,6 +2,8 @@ export enum OperationsType {
     RESPONSE = 'RESPONSE',
     REQUEST = 'REQUEST',
     QUERY = 'QUERY',
+    POSTGRES_QUERY = 'POSTGRES_QUERY',
+    MYSQL_QUERY = 'MYSQL_QUERY',
     ENVIRONMENT = 'ENVIRONMENT',
     LAMBDA = 'LAMBDA',
     CUSTOM = 'CUSTOM'

@@ -2,20 +2,26 @@ import {IIntegrationConfig} from "../config";
 import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegration} from "./index";
-import {FieldDef, QueryResult} from "pg";
+import {QueryResult} from "pg";
 import {Environments} from "../sharedKernel/constants";
 import path from "path";
+import {Trace} from "../trace/Trace";
+import {OperationsType} from "./constants";
+import {Connection, FieldInfo, MysqlError, queryCallback, QueryOptions} from "mysql";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
 const {Integrations} = require("./integrations");
 
 interface IQueryData {
-    rows: any[]
-    command?: string;
-    rowCount?: number;
-    oid?: number;
-    fields?: FieldDef[];
+    response: any
+    fields?: any
+}
+
+interface IParsedArgs {
+    statement: string;
+    values: any[] | undefined;
+    originalCallback: queryCallback;
 }
 
 export class MysqlIntegration extends Integrations implements IIntegration {
@@ -24,6 +30,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
     private readonly env: string;
     private config: IIntegrationConfig;
     private readonly namespace: string;
+    private _mysqlConnection: Connection;
     private _mysql: any;
 
     constructor() {
@@ -42,19 +49,24 @@ export class MysqlIntegration extends Integrations implements IIntegration {
 
         this.wrapMockConnect = this.wrapMockConnect.bind(this);
 
-        const mysql = this.require(path.join("mysql", "lib/Connection"));
+        const mysqlConnection = this.require(path.join("mysql", "lib/Connection"));
+        if (mysqlConnection) {
+            this._mysqlConnection = mysqlConnection
 
-        if (mysql) {
-            this._mysql = mysql
-
-            /**
-             * In debug mode we need to mock extra methods,
-             * one of those is connect since we need to avoid connecting to the physical database
-             */
             if (this.env === Environments.DEBUG) {
 
             } else {
-                shimmer.wrap(mysql.prototype, 'query', this.wrapQuery())
+                shimmer.wrap(mysqlConnection.prototype, 'query', this.wrapQuery())
+            }
+        }
+
+        const mysql = this.require("mysql");
+        if (mysql) {
+            this._mysql = mysql
+
+            if (this.env === Environments.DEBUG) {
+
+            } else {
             }
         }
     }
@@ -64,47 +76,86 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         return function (query) {
             return function (...args): Promise<QueryResult> {
                 logger.info(`executing main wrapper`, integration.namespace)
-                // console.log(args)
 
                 try {
-                    const statement = args[0];
-                    const values = args[1];
+                    const newArgs = [...args]
+                    const {statement, originalCallback} = integration.parseArgs(...newArgs);
 
-                    if (statement) {
-                        const statementType = statement.split(' ')[0].toUpperCase();
-                        // console.log(statementType)
-                    }
-                    if (statement && Array.isArray(values)) {
-                        const fullStatement = integration.replaceSqlQueryArgs(statement, values);
-                        const correlationId = integration.hashSha1(fullStatement);
-                        console.log(fullStatement)
-                        console.log(correlationId)
-                    }
+                    const wrappedCallback = (err: MysqlError | null, res?: any, fields?: FieldInfo[]) => {
+                        if (!err) {
+                            const correlationId = integration.hashSha1(statement);
+                            logger.info(`CorrelationId: ${correlationId}`, integration.namespace)
 
-                    const sequence = query.call(this, ...args);
+                            const data: IQueryData = {
+                                response: res,
+                                fields
+                            }
 
-                    const originalCallback = sequence.onResult;
+                            const trace = new Trace({
+                                operationType: OperationsType.MYSQL_QUERY,
+                                correlationId,
+                                data
+                            })
 
-                    const wrappedCallback = (err: any, res: any) => {
-                        if (err) {
+                            integration.tracer.add(trace.trace())
                         }
 
-                        originalCallback(err, res)
-                    };
-
-                    if (sequence.onResult) {
-                        sequence.onResult = wrappedCallback;
-                    } else {
-                        sequence.on('end', () => {
-                            console.log("end")
-                        });
+                        originalCallback(err, res, fields)
                     }
 
-                    return sequence;
+                    if (args.length === 3) {
+                        newArgs[2] = wrappedCallback
+                    } else {
+                        newArgs[1] = wrappedCallback
+                    }
+
+                    return query.call(this, ...newArgs);
                 } catch (error) {
+                    logger.error(error, integration.namespace)
                     return query.apply(this, args);
                 }
             };
+        }
+    }
+
+    private parseArgs(...newArgs: any[]): IParsedArgs {
+        const rawQueryOrOptions: string | QueryOptions = newArgs[0]
+        let statement: string;
+        let callback: queryCallback;
+        let values: any[];
+        const lastArgument = newArgs[2];
+
+        /**
+         * If there are three arguments:
+         * (options: string | QueryOptions, values: any, callback?: queryCallback)
+         */
+        if (newArgs.length === 3) {
+            values = newArgs[1]
+            statement = this.replaceSqlQueryArgs(rawQueryOrOptions as string, values);
+            callback = lastArgument;
+        }
+
+        /**
+         * if there are two arguments:
+         * (options: string | QueryOptions, callback?: queryCallback)
+         */
+        if (newArgs.length === 2) {
+            if (typeof rawQueryOrOptions === 'string') {
+                statement = rawQueryOrOptions
+            } else {
+                const {values, sql} = rawQueryOrOptions as QueryOptions
+                statement = this.replaceSqlQueryArgs(sql, values)
+            }
+
+            callback = newArgs[1]
+        }
+
+        logger.info(`query: ${statement}`, this.namespace)
+
+        return {
+            statement,
+            values,
+            originalCallback: callback
         }
     }
 
@@ -141,14 +192,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
      * Ex: SELECT 1 + ? AS result, [4] => SELECT 1 + 5 AS result
      */
     private replaceSqlQueryArgs(statement: string, values: any[]): string {
-        let finalStatement = statement
-        const replacerCount = statement.split("?").length - 1;
-
-        for (let i = 0; i < replacerCount; i++) {
-            finalStatement = finalStatement.replace("?", values[i])
-        }
-
-        return finalStatement
+        return this._mysql.format(statement, values)
     }
 
     private getExtraFieldsFromRes(res: QueryResult, data: any) {
@@ -163,8 +207,9 @@ export class MysqlIntegration extends Integrations implements IIntegration {
      * this will blacklist useless ORM extra statements
      */
     end() {
-        if (this._mysql) {
-            shimmer.unwrap(this._mysql.prototype, 'query')
+        if (this._mysqlConnection) {
+            // @ts-ignore
+            shimmer.unwrap(this._mysqlConnection.prototype, 'query')
         }
     }
 }
