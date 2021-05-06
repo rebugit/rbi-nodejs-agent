@@ -1,8 +1,8 @@
-import {EnvironmentIntegration} from "../../src/integrations/environmentIntegration";
-import {Tracer} from "../../src/trace/Tracer";
-import {TracesLoader} from "../../src/trace/TracesLoader";
+import {EnvironmentIntegration} from "../../../src/integrations/environmentIntegration";
+import {Tracer} from "../../../src/trace/Tracer";
+import {TracesLoader} from "../../../src/trace/TracesLoader";
 import {parse, stringify} from "flatted";
-import {OperationsType} from "../../src/integrations/constants";
+import {OperationsType} from "../../../src/integrations/constants";
 
 const clearEnvironmentVariables = () => {
     for (const key of Object.keys(process.env)) {

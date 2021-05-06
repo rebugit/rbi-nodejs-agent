@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run test:units && npm run test:integrations",
-    "test:units": "jest __tests__/",
+    "test:units": "jest __tests__/unitTests",
     "test:integrations": "npm run build && jest __tests__/integrationTests",
     "build": "tsc"
   },
@@ -51,12 +51,7 @@
   },
   "jest": {
     "modulePathIgnorePatterns": [
-      "__tests__/expressjs",
-      "__tests__/nestjs",
-      "__tests__/integrations",
-      "__tests__/integrationTests/utils",
-      "__tests__/lambda",
-      "__tests__/utils.ts"
+      "__tests__/integrationTests/utils"
     ],
     "preset": "ts-jest"
   }

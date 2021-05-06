@@ -1,12 +1,12 @@
-import {Tracer} from "../../src/trace/Tracer";
-import {TracesLoader} from "../../src/trace/TracesLoader";
-import {HttpIntegration} from "../../src/integrations/httpIntegration";
-import {Environments} from "../../src/sharedKernel/constants";
+import {Tracer} from "../../../src/trace/Tracer";
+import {TracesLoader} from "../../../src/trace/TracesLoader";
+import {HttpIntegration} from "../../../src/integrations/httpIntegration";
+import {Environments} from "../../../src/sharedKernel/constants";
 import shimmer = require("shimmer");
 import * as https from "https";
-import {HttpMock} from "../../src/integrations/mocks/http";
+import {HttpMock} from "../../../src/integrations/mocks/http";
 import * as events from "events";
-import {OperationsType} from "../../src/integrations/constants";
+import {OperationsType} from "../../../src/integrations/constants";
 
 const fakeTrace = {
     "id": "e406231c-e637-4e74-9ef6-d8f3950e49cd",

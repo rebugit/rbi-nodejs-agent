@@ -1,12 +1,12 @@
 import shimmer = require("shimmer");
-import {PostgresIntegration} from "../../src/integrations/postgresIntegration";
+import {PostgresIntegration} from "../../../src/integrations/postgresIntegration";
 import {ClientBase, QueryConfig, QueryResult} from "pg";
-import {Tracer} from "../../src/trace/Tracer";
-import {TracesLoader} from "../../src/trace/TracesLoader";
+import {Tracer} from "../../../src/trace/Tracer";
+import {TracesLoader} from "../../../src/trace/TracesLoader";
 import {parse} from "flatted";
-import {ITrace} from "../../src/trace/Trace";
-import {Environments} from "../../src/sharedKernel/constants";
-import {sha1} from "../utils";
+import {ITrace} from "../../../src/trace/Trace";
+import {Environments} from "../../../src/sharedKernel/constants";
+import {sha1} from "../../utils";
 
 const compareHashedQuery = (hashedQuery: string): boolean => {
     const sha = sha1(fakeQuery.replace('$1', fakeValues[0].toString()));

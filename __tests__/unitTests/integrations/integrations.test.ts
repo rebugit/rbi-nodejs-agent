@@ -1,4 +1,4 @@
-import {Integrations} from "../../src/integrations/integrations";
+import {Integrations} from "../../../src/integrations/integrations";
 
 describe('Integration main class', function () {
     it('should correctly require a module', function () {
