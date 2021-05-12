@@ -46,7 +46,6 @@ export class Integrations {
     }
 
     protected hashSha1 = (value: string): string => {
-        console.log(value, "FROM EXTENSION")
         const hash = crypto.createHash('sha1')
         hash.update(value)
         return hash.digest('hex')

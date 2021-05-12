@@ -8,6 +8,7 @@ import path from "path";
 import {Trace} from "../trace/Trace";
 import {OperationsType} from "./constants";
 import {Connection, FieldInfo, MysqlError, queryCallback, QueryOptions} from "mysql";
+import {MysqlMock} from "./mocks/mysql";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -39,7 +40,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         this.env = process.env.REBUGIT_ENV
         this.namespace = 'pgIntegration'
 
-        this.handleResponse = this.handleResponse.bind(this);
+        this.mockQuery = this.mockQuery.bind(this);
     }
 
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -47,14 +48,11 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         this.tracesLoader = tracesLoader
         this.config = config || {}
 
-        this.wrapMockConnect = this.wrapMockConnect.bind(this);
-
         const mysqlConnection = this.require(path.join("mysql", "lib/Connection"));
         if (mysqlConnection) {
             this._mysqlConnection = mysqlConnection
 
             if (this.env === Environments.DEBUG) {
-
             } else {
                 shimmer.wrap(mysqlConnection.prototype, 'query', this.wrapQuery())
             }
@@ -65,7 +63,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
             this._mysql = mysql
 
             if (this.env === Environments.DEBUG) {
-
+                shimmer.wrap(mysql, 'createConnection', this.wrapMockCreateConnection())
             } else {
             }
         }
@@ -75,7 +73,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         const integration = this
         return function (query) {
             return function (...args): Promise<QueryResult> {
-                logger.info(`executing main wrapper`, integration.namespace)
+                logger.info(`executing query wrapper`, integration.namespace)
 
                 try {
                     const newArgs = [...args]
@@ -118,6 +116,73 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
+    private mockQuery(...args) {
+        logger.info(`executing query mock wrapper`, this.namespace)
+
+        const newArgs = [...args]
+        const {statement, originalCallback} = this.parseArgs(...newArgs);
+
+        const wrappedCallback = () => {
+            const correlationId = this.hashSha1(statement);
+            logger.info(`CorrelationId: ${correlationId}`, this.namespace)
+
+            const data = this.tracesLoader.get<IQueryData>(correlationId)
+
+            originalCallback(null, data.response, data.fields)
+        }
+
+        if (args.length === 3) {
+            newArgs[2] = wrappedCallback
+        } else {
+            newArgs[1] = wrappedCallback
+        }
+
+        const mockQuery = () => {
+            wrappedCallback()
+        }
+
+        return mockQuery.call(this)
+    }
+
+    private mockConnect(...args) {
+        if (typeof args[0] === 'function') {
+            args[0](null)
+        } else {
+            args[1](null)
+        }
+    }
+
+    private mockEnd(...args) {
+        if (typeof args[0] === 'function') {
+            args[0](null)
+        } else {
+            args[1](null)
+        }
+    }
+
+    private wrapMockCreateConnection() {
+        const integration = this
+        return function (createConnection) {
+            return function (...args) {
+                logger.info(`executing createConnection mock wrapper`, integration.namespace)
+
+                try {
+                    return new MysqlMock()
+                        .createConnection({
+                            mockQuery: integration.mockQuery,
+                            mockConnect: integration.mockConnect,
+                            mockEnd: integration.mockEnd
+                        })
+                        .call(this)
+                } catch (error) {
+                    logger.error(error, integration.namespace)
+                    return createConnection.apply(this, args);
+                }
+            };
+        }
+    }
+
+
     private parseArgs(...newArgs: any[]): IParsedArgs {
         const rawQueryOrOptions: string | QueryOptions = newArgs[0]
         let statement: string;
@@ -131,7 +196,14 @@ export class MysqlIntegration extends Integrations implements IIntegration {
          */
         if (newArgs.length === 3) {
             values = newArgs[1]
-            statement = this.replaceSqlQueryArgs(rawQueryOrOptions as string, values);
+            if (typeof rawQueryOrOptions === 'string'){
+                statement = this.replaceSqlQueryArgs(rawQueryOrOptions as string, values);
+            }
+
+            if (typeof rawQueryOrOptions === 'object'){
+                statement = this.replaceSqlQueryArgs((rawQueryOrOptions as QueryOptions).sql, values)
+            }
+
             callback = lastArgument;
         }
 
@@ -159,34 +231,6 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrapMockQuery() {
-        const integration = this
-        return function () {
-            return function (...args): Promise<IQueryData> | any {
-                throw new Error("Not implemented")
-            }
-        }
-    }
-
-    /**
-     * This method mock the connect method.
-     * In debug mode we do not connect to the database, therefore we need to mock that method.
-     */
-    private wrapMockConnect() {
-        let integration = this
-        return function (original) {
-            return function (): any {
-                throw new Error("Not implemented")
-            }
-        }
-    }
-
-    private handleResponse(value: QueryResult, statement: string): any {
-        if (this.env === 'debug') {
-        } else {
-        }
-    }
-
     /**
      * Replace all query parameters
      * Ex: SELECT 1 + ? AS result, [4] => SELECT 1 + 5 AS result
@@ -203,13 +247,16 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-    /**
-     * this will blacklist useless ORM extra statements
-     */
     end() {
-        if (this._mysqlConnection) {
-            // @ts-ignore
-            shimmer.unwrap(this._mysqlConnection.prototype, 'query')
+        if (this.env === Environments.DEBUG) {
+            if (this._mysql) {
+                shimmer.unwrap(this._mysql, 'createConnection')
+            }
+        } else {
+            if (this._mysqlConnection) {
+                // @ts-ignore
+                shimmer.unwrap(this._mysqlConnection.prototype, 'query')
+            }
         }
     }
 }

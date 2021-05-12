@@ -4,9 +4,10 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "test": "npm run test:units && npm run test:integrations",
+    "test": "npm run test:units && npm run test:integrations:prodmode && npm run test:integrations:debugmode",
     "test:units": "jest __tests__/unitTests",
-    "test:integrations": "npm run build && jest __tests__/integrationTests",
+    "test:integrations:prodmode": "npm run build && jest __tests__/integrationTests/*\\.prodMode.test.ts",
+    "test:integrations:debugmode": "npm run build && jest __tests__/integrationTests/*\\.debugMode.test.ts",
     "build": "tsc"
   },
   "keywords": [
@@ -35,6 +36,7 @@
     "got": "^11.8.2",
     "husky": "^4.0.0",
     "jest": "^26.6.3",
+    "knex": "^0.95.5",
     "mongodb": "^3.6.6",
     "mysql": "^2.18.1",
     "pg": "^8.6.0",

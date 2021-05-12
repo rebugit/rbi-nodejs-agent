@@ -1,22 +1,25 @@
 import {sha1} from "../../utils";
+import {Sequelize} from "sequelize";
 
 const mysql = require('mysql');
 
+const connectionInfo = {
+    host: 'localhost',
+    user: 'root',
+    database: 'mysql',
+    password: 'mysql',
+}
+
 export const query = async (...args) => {
     return new Promise((resolve, reject) => {
-        const connection = mysql.createConnection({
-            host: 'localhost',
-            user: 'root',
-            database: 'mysql',
-            password: 'mysql',
-        });
+        const connection = mysql.createConnection(connectionInfo);
 
         connection.connect(err => {
+            console.log("CONNECT CALLED")
             if (err) {
                 console.log("Connection", err.message)
-                return;
+                throw err;
             }
-            console.log('connected as id ' + connection.threadId);
         });
 
         connection.query(...args, (error, results, fields) => {
@@ -32,6 +35,33 @@ export const query = async (...args) => {
             });
         });
     });
+}
+
+export const queryWithSequelize = async (...args) => {
+    const sequelize = new Sequelize(
+        connectionInfo.database,
+        connectionInfo.user,
+        connectionInfo.password,
+        {
+            logging: console.log,
+            dialect: 'mysql'
+        }
+    )
+    // @ts-ignore
+    const res = await sequelize.query(...args)
+    return res[0]
+}
+
+export const queryWithKnex = async (...args: any[]) => {
+    const knex = require('knex')({
+        client: 'mysql',
+        connection: connectionInfo,
+    });
+
+    const res = await knex.raw(...args)
+    await knex.destroy()
+
+    return res[0]
 }
 
 export const hashQuery = (...args): string => {
