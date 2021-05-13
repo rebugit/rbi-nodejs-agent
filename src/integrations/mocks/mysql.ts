@@ -25,7 +25,6 @@ export class MysqlMock {
 
             // TODO this has two implementations
             connect(...args): void {
-                console.log(args)
                 mockConnect(...args)
             },
             destroy(): void {

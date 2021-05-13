@@ -65,6 +65,7 @@ export class Mysql2Integration extends MysqlIntegration implements IIntegration 
 
             if (this.env === Environments.DEBUG) {
                 shimmer.wrap(mysql2, 'createConnection', this.wrapMockCreateConnection())
+                shimmer.wrap(mysql2, 'createPool', this.wrapMockCreateConnection())
             } else {
             }
         }
@@ -78,6 +79,7 @@ export class Mysql2Integration extends MysqlIntegration implements IIntegration 
         if (this.env === Environments.DEBUG) {
             if (this._mysql2) {
                 shimmer.unwrap(this._mysql2, 'createConnection')
+                shimmer.unwrap(this._mysql2, 'createPool')
             }
         } else {
             if (this._mysqlConnection2) {

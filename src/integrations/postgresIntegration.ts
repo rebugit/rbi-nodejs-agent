@@ -299,7 +299,10 @@ export class PostgresIntegration extends Integrations implements IIntegration {
     end() {
         if (this._pg) {
             shimmer.unwrap(this._pg.Client.prototype, 'query')
-            shimmer.unwrap(this._pg.Client.prototype, 'connect')
+
+            if (this.env === Environments.DEBUG) {
+                shimmer.unwrap(this._pg.Client.prototype, 'connect')
+            }
         }
     }
 }

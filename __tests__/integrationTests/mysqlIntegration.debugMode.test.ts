@@ -1,5 +1,5 @@
 import {Tracer} from "../../src/trace/Tracer";
-import {query, query2, queryWithKnex, queryWithSequelize} from "./utils/mysql.utils";
+import {query, query2, query2WithPool, queryWithKnex, queryWithPool, queryWithSequelize} from "./utils/mysql.utils";
 import {parse} from "flatted";
 // @ts-ignore
 import {Mysql, Mysql2} from '../../dist/integrations';
@@ -43,6 +43,15 @@ describe('MySql Integration debug mode', function () {
             expect(response).toEqual(parse(traces[0].data).response)
         });
 
+        it('should correctly integrate with native mysql pool driver', async function () {
+            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
+
+            const response = await queryWithPool(...args);
+
+            expect(tracer.traces).toHaveLength(0)
+            expect(response).toEqual(parse(traces[0].data).response)
+        });
+
         it('should correctly integrate with Knex', async function () {
             const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
 
@@ -71,6 +80,15 @@ describe('MySql Integration debug mode', function () {
             const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
 
             const response = await query2(...args);
+
+            expect(tracer.traces).toHaveLength(0)
+            expect(response).toEqual(parse(traces[0].data).response)
+        });
+
+        it('should correctly integrate with native mysql pool driver', async function () {
+            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
+
+            const response = await query2WithPool(...args);
 
             expect(tracer.traces).toHaveLength(0)
             expect(response).toEqual(parse(traces[0].data).response)

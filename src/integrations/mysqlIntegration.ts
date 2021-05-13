@@ -66,6 +66,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
 
             if (this.env === Environments.DEBUG) {
                 shimmer.wrap(mysql, 'createConnection', this.wrapMockCreateConnection())
+                shimmer.wrap(mysql, 'createPool', this.wrapMockCreateConnection())
             } else {
             }
         }
@@ -215,7 +216,6 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-
     private parseArgs(...newArgs: any[]): IParsedArgs {
         const rawQueryOrOptions: string | QueryOptions | Query = newArgs[0]
         let statement: string;
@@ -255,6 +255,10 @@ export class MysqlIntegration extends Integrations implements IIntegration {
             callback = newArgs[1]
         }
 
+        /**
+         * if there is only one argument:
+         * (query: Query)
+         */
         if (newArgs.length === 1) {
             // @ts-ignore
             const {values, sql, _callback, onResult} = rawQueryOrOptions as Query
@@ -304,20 +308,12 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         if (this.env === Environments.DEBUG) {
             if (this._mysql) {
                 shimmer.unwrap(this._mysql, 'createConnection')
-            }
-
-            if (this._mysql2) {
-                shimmer.unwrap(this._mysql2, 'createConnection')
+                shimmer.unwrap(this._mysql, 'createPool')
             }
         } else {
             if (this._mysqlConnection) {
                 // @ts-ignore
                 shimmer.unwrap(this._mysqlConnection.prototype, 'query')
-            }
-
-            if (this._mysqlConnection2) {
-                // @ts-ignore
-                shimmer.unwrap(this._mysqlConnection2.prototype, 'query')
             }
         }
     }
