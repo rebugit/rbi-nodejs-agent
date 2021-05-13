@@ -1,4 +1,5 @@
 import {Connection, ConnectionOptions, MysqlError, QueryOptions} from "mysql";
+import {Connection as Connection2} from 'mysql2';
 
 export class MysqlMock {
     createConnection = ({mockQuery, mockConnect, mockEnd}) => (): Connection => {
@@ -10,8 +11,8 @@ export class MysqlMock {
             query(...args) {
                 mockQuery(...args)
             },
-            state: undefined,
-            threadId: undefined,
+            state: 'connected',
+            threadId: 1,
             beginTransaction(...args): void {
             },
             // TODO this has two implementations
@@ -24,6 +25,7 @@ export class MysqlMock {
 
             // TODO this has two implementations
             connect(...args): void {
+                console.log(args)
                 mockConnect(...args)
             },
             destroy(): void {
@@ -52,20 +54,19 @@ export class MysqlMock {
             },
             // @ts-ignore
             on(event: string | symbol, listener: (...args: any[]) => void): void{
-
             },
             // @ts-ignore
             once(event: string | symbol, listener: (...args: any[]) => void){
-
+                if (event === 'connect'){
+                    listener()
+                }
             },
             // @ts-ignore
             removeAllListeners(): void{
-
             },
             // @ts-ignore
-            emit(...args: any[]){
-                console.log(args)
-            },
+            removeListener(): void {
+            }
         }
     }
 }

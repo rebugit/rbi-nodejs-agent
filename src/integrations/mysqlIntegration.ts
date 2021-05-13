@@ -7,7 +7,7 @@ import {Environments} from "../sharedKernel/constants";
 import path from "path";
 import {Trace} from "../trace/Trace";
 import {OperationsType} from "./constants";
-import {Connection, FieldInfo, MysqlError, queryCallback, QueryOptions} from "mysql";
+import {Connection, FieldInfo, MysqlError, Query, queryCallback, QueryOptions} from "mysql";
 import {MysqlMock} from "./mocks/mysql";
 
 const shimmer = require("shimmer");
@@ -26,19 +26,21 @@ interface IParsedArgs {
 }
 
 export class MysqlIntegration extends Integrations implements IIntegration {
-    private tracer: Tracer;
-    private tracesLoader: TracesLoader;
-    private readonly env: string;
-    private config: IIntegrationConfig;
-    private readonly namespace: string;
-    private _mysqlConnection: Connection;
-    private _mysql: any;
+    protected tracer: Tracer;
+    protected tracesLoader: TracesLoader;
+    protected readonly env: string;
+    protected config: IIntegrationConfig;
+    protected readonly namespace: string;
+    protected _mysqlConnection: Connection;
+    protected _mysql: any;
+    protected _mysqlConnection2: Connection;
+    protected _mysql2: any;
 
     constructor() {
         super()
 
         this.env = process.env.REBUGIT_ENV
-        this.namespace = 'pgIntegration'
+        this.namespace = 'mysqlIntegration'
 
         this.mockQuery = this.mockQuery.bind(this);
     }
@@ -69,15 +71,19 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrapQuery() {
+    protected wrapQuery() {
         const integration = this
         return function (query) {
-            return function (...args): Promise<QueryResult> {
+            return function (...args) {
                 logger.info(`executing query wrapper`, integration.namespace)
 
                 try {
                     const newArgs = [...args]
                     const {statement, originalCallback} = integration.parseArgs(...newArgs);
+
+                    if (integration.isInvalidStatement(statement)) {
+                        return query.apply(this, args);
+                    }
 
                     const wrappedCallback = (err: MysqlError | null, res?: any, fields?: FieldInfo[]) => {
                         if (!err) {
@@ -103,8 +109,18 @@ export class MysqlIntegration extends Integrations implements IIntegration {
 
                     if (args.length === 3) {
                         newArgs[2] = wrappedCallback
-                    } else {
+                    }
+
+                    if (args.length === 2) {
                         newArgs[1] = wrappedCallback
+                    }
+
+                    if (args.length === 1) {
+                        if (newArgs[0].onResult) {
+                            newArgs[0].onResult = wrappedCallback
+                        } else {
+                            newArgs[0]._callback = wrappedCallback
+                        }
                     }
 
                     return query.call(this, ...newArgs);
@@ -116,11 +132,28 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private mockQuery(...args) {
+    protected mockQuery(...args) {
         logger.info(`executing query mock wrapper`, this.namespace)
 
         const newArgs = [...args]
         const {statement, originalCallback} = this.parseArgs(...newArgs);
+
+        if (this.isInvalidStatement(statement)) {
+            let mockQuery = () => {
+                originalCallback(null)
+            }
+
+            /**
+             * Sequelize check the version of the database, if this value is empty it will throw an error
+             */
+            if (statement.includes("SELECT VERSION()")) {
+                mockQuery = () => {
+                    originalCallback(null, [{version: ''}])
+                }
+            }
+
+            return mockQuery.call(this)
+        }
 
         const wrappedCallback = () => {
             const correlationId = this.hashSha1(statement);
@@ -144,7 +177,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         return mockQuery.call(this)
     }
 
-    private mockConnect(...args) {
+    protected mockConnect(...args) {
         if (typeof args[0] === 'function') {
             args[0](null)
         } else {
@@ -152,7 +185,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private mockEnd(...args) {
+    protected mockEnd(...args) {
         if (typeof args[0] === 'function') {
             args[0](null)
         } else {
@@ -160,7 +193,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrapMockCreateConnection() {
+    protected wrapMockCreateConnection() {
         const integration = this
         return function (createConnection) {
             return function (...args) {
@@ -184,7 +217,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
 
 
     private parseArgs(...newArgs: any[]): IParsedArgs {
-        const rawQueryOrOptions: string | QueryOptions = newArgs[0]
+        const rawQueryOrOptions: string | QueryOptions | Query = newArgs[0]
         let statement: string;
         let callback: queryCallback;
         let values: any[];
@@ -196,11 +229,11 @@ export class MysqlIntegration extends Integrations implements IIntegration {
          */
         if (newArgs.length === 3) {
             values = newArgs[1]
-            if (typeof rawQueryOrOptions === 'string'){
+            if (typeof rawQueryOrOptions === 'string') {
                 statement = this.replaceSqlQueryArgs(rawQueryOrOptions as string, values);
             }
 
-            if (typeof rawQueryOrOptions === 'object'){
+            if (typeof rawQueryOrOptions === 'object') {
                 statement = this.replaceSqlQueryArgs((rawQueryOrOptions as QueryOptions).sql, values)
             }
 
@@ -222,6 +255,17 @@ export class MysqlIntegration extends Integrations implements IIntegration {
             callback = newArgs[1]
         }
 
+        if (newArgs.length === 1) {
+            // @ts-ignore
+            const {values, sql, _callback, onResult} = rawQueryOrOptions as Query
+            statement = this.replaceSqlQueryArgs(sql, values)
+            if (onResult) {
+                callback = onResult
+            } else {
+                callback = _callback
+            }
+        }
+
         logger.info(`query: ${statement}`, this.namespace)
 
         return {
@@ -235,7 +279,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
      * Replace all query parameters
      * Ex: SELECT 1 + ? AS result, [4] => SELECT 1 + 5 AS result
      */
-    private replaceSqlQueryArgs(statement: string, values: any[]): string {
+    protected replaceSqlQueryArgs(statement: string, values: any[]): string {
         return this._mysql.format(statement, values)
     }
 
@@ -247,16 +291,42 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
+    /**
+     * this will blacklist useless ORM extra statements
+     */
+    private isInvalidStatement(statement: string): boolean {
+        const index = blackListStatements
+            .findIndex(element => statement.toUpperCase().includes(element.toUpperCase()))
+        return index >= 0;
+    }
+
     end() {
         if (this.env === Environments.DEBUG) {
             if (this._mysql) {
                 shimmer.unwrap(this._mysql, 'createConnection')
+            }
+
+            if (this._mysql2) {
+                shimmer.unwrap(this._mysql2, 'createConnection')
             }
         } else {
             if (this._mysqlConnection) {
                 // @ts-ignore
                 shimmer.unwrap(this._mysqlConnection.prototype, 'query')
             }
+
+            if (this._mysqlConnection2) {
+                // @ts-ignore
+                shimmer.unwrap(this._mysqlConnection2.prototype, 'query')
+            }
         }
     }
 }
+
+/**
+ * Group of queries that we don't want to store, mostly ORM internal queries
+ */
+const blackListStatements: string[] = [
+    'SET time_zone = \'+00:00\'',
+    'SELECT VERSION()',
+]
