@@ -1,6 +1,6 @@
 import {sha1} from "../../utils";
 import {Sequelize} from "sequelize";
-import {createConnection} from "typeorm";
+import * as typeORM from "typeorm";
 
 const mysql = require('mysql');
 const mysql2 = require('mysql2');
@@ -23,6 +23,9 @@ export const query = async (...args) => {
                 throw err;
             }
         });
+
+        const listeners = connection.listeners('error');
+        console.log(listeners);
 
         connection.query(...args, (error, results, fields) => {
             if (error) {
@@ -85,6 +88,12 @@ export const query2 = async (...args) => {
     });
 }
 
+export const query2WithPromise = async (...args) => {
+    const connection = await mysql2.createConnection(connectionInfo);
+    const [row, fields] = await connection.query(...args);
+    return row
+}
+
 export const query2WithPool = async (...args) => {
     return new Promise((resolve, reject) => {
         const pool = mysql2.createPool(connectionInfo);
@@ -132,14 +141,19 @@ export const queryWithKnex = async (...args: any[]) => {
 }
 
 export const queryWithTypeORM = async (...args: any[]) => {
-    const connection = await createConnection({
+    // TypeORM use username instead of user
+    const newConnectionInfo = {
         ...connectionInfo,
+        username: 'root',
         type: 'mysql'
-    })
+    }
+    // @ts-ignore
+    const connection = await typeORM.createConnection(newConnectionInfo)
 
     // @ts-ignore
     const res = await connection.query(...args);
-    console.log(res)
+    await connection.close()
+    return res
 }
 
 export const hashQuery = (...args): string => {

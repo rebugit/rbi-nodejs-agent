@@ -8,7 +8,6 @@ import path from "path";
 import {Trace} from "../trace/Trace";
 import {OperationsType} from "./constants";
 import {Connection, FieldInfo, MysqlError, Query, queryCallback, QueryOptions} from "mysql";
-import {MysqlMock} from "./mocks/mysql";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -42,6 +41,8 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         this.env = process.env.REBUGIT_ENV
         this.namespace = 'mysqlIntegration'
 
+        this.counter = 0
+
         this.mockQuery = this.mockQuery.bind(this);
     }
 
@@ -66,7 +67,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
 
             if (this.env === Environments.DEBUG) {
                 shimmer.wrap(mysql, 'createConnection', this.wrapMockCreateConnection())
-                shimmer.wrap(mysql, 'createPool', this.wrapMockCreateConnection())
+                shimmer.wrap(mysql, 'createPool', this.wrapMockCreatePool())
             } else {
             }
         }
@@ -116,7 +117,9 @@ export class MysqlIntegration extends Integrations implements IIntegration {
                         newArgs[1] = wrappedCallback
                     }
 
+                    // This is in the case of Pool
                     if (args.length === 1) {
+                        // Depending whether is mysql (_callback) or mysql2 (onResult)
                         if (newArgs[0].onResult) {
                             newArgs[0].onResult = wrappedCallback
                         } else {
@@ -200,21 +203,48 @@ export class MysqlIntegration extends Integrations implements IIntegration {
             return function (...args) {
                 logger.info(`executing createConnection mock wrapper`, integration.namespace)
 
-                try {
-                    return new MysqlMock()
-                        .createConnection({
-                            mockQuery: integration.mockQuery,
-                            mockConnect: integration.mockConnect,
-                            mockEnd: integration.mockEnd
-                        })
-                        .call(this)
-                } catch (error) {
-                    logger.error(error, integration.namespace)
-                    return createConnection.apply(this, args);
+                const connection = createConnection(...args)
+                connection.connect = integration.mockConnect
+                connection.end = integration.mockEnd
+                connection.query = integration.mockQuery
+                connection.once = function (event: string | symbol, listener: (...args: any[]) => void) {
+                    if (event === 'connect') {
+                        listener()
+                    }
                 }
+                connection.state = 'connected'
+
+                return connection
             };
         }
     }
+
+    protected wrapMockCreatePool() {
+        const integration = this
+        return function (createPool) {
+            return function (...args) {
+                logger.info(`executing createPool mock wrapper`, integration.namespace)
+
+                const pool = createPool(...args)
+                pool.connect = integration.mockConnect
+                pool.end = integration.mockEnd
+                pool.query = integration.mockQuery
+                pool.once = function (event: string | symbol, listener: (...args: any[]) => void) {
+                    if (event === 'connect') {
+                        listener()
+                    }
+                }
+                pool.state = 'connected'
+                pool.release = function () {}
+                pool.getConnection = function (...args) {
+                    args[0](null, pool)
+                }
+
+                return pool
+            };
+        }
+    }
+
 
     private parseArgs(...newArgs: any[]): IParsedArgs {
         const rawQueryOrOptions: string | QueryOptions | Query = newArgs[0]
@@ -256,7 +286,9 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
 
         /**
-         * if there is only one argument:
+         * if there is only one argument: usually if we are implementing a Pool
+         * _callback is from mysql
+         * onResult is from mysql2
          * (query: Query)
          */
         if (newArgs.length === 1) {

@@ -1,5 +1,4 @@
 import {Connection, ConnectionOptions, MysqlError, QueryOptions} from "mysql";
-import {Connection as Connection2} from 'mysql2';
 
 export class MysqlMock {
     createConnection = ({mockQuery, mockConnect, mockEnd}) => (): Connection => {
@@ -45,6 +44,8 @@ export class MysqlMock {
             },
             ping(options?: QueryOptions | ((err: MysqlError) => void), callback?: (err: MysqlError) => void): void {
             },
+            release(): void {
+            },
             resume(): void {
             },
             rollback(...args): void {
@@ -52,19 +53,23 @@ export class MysqlMock {
             statistics(...args): void {
             },
             // @ts-ignore
-            on(event: string | symbol, listener: (...args: any[]) => void): void{
+            on(event: string | symbol, listener: (...args: any[]) => void): void {
             },
             // @ts-ignore
-            once(event: string | symbol, listener: (...args: any[]) => void){
-                if (event === 'connect'){
+            once(event: string | symbol, listener: (...args: any[]) => void) {
+                if (event === 'connect') {
                     listener()
                 }
             },
             // @ts-ignore
-            removeAllListeners(): void{
+            removeAllListeners(): void {
             },
             // @ts-ignore
             removeListener(): void {
+            },
+            // @ts-ignore
+            listeners(event: string | symbol): Function[] {
+                return []
             }
         }
     }

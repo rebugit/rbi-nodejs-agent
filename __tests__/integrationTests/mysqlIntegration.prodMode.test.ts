@@ -71,6 +71,18 @@ describe('MySql Integration production mode', function () {
             expect(tracer.traces[0].correlationId).toBe(s)
             expect(response).toEqual(parse(tracer.traces[0].data).response)
         });
+
+        // typeORM is broken with mysql and mysql2. Under the hood it gets mysql first if installed
+        it('should correctly integrate with TypeORM', async function () {
+            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
+            const s = hashQuery(...args);
+
+            const response = await queryWithTypeORM(...args)
+
+            expect(tracer.traces).toHaveLength(1)
+            expect(tracer.traces[0].correlationId).toBe(s)
+            expect(response).toEqual(parse(tracer.traces[0].data).response)
+        })
     });
 
     describe('MySQL2', function () {
@@ -107,18 +119,6 @@ describe('MySql Integration production mode', function () {
             expect(tracer.traces[0].correlationId).toBe(s)
             expect(response).toEqual(parse(tracer.traces[0].data).response)
         });
-
-        // TODO typeORM is broken with mysql
-        it.skip('should correctly integrate with TypeORM', async function () {
-            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
-            const s = hashQuery(...args);
-
-            const response = await queryWithTypeORM(...args)
-
-            expect(tracer.traces).toHaveLength(1)
-            expect(tracer.traces[0].correlationId).toBe(s)
-            expect(response).toEqual(parse(tracer.traces[0].data).response)
-        })
 
         it('should correctly integrate with Sequelize', async function () {
             const args = ['SELECT (1 + ?) * ? AS result', {replacements: [4, 2]}]

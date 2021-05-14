@@ -2,29 +2,12 @@ import {IIntegrationConfig} from "../config";
 import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegration} from "./index";
-import {QueryResult} from "pg";
 import {Environments} from "../sharedKernel/constants";
 import path from "path";
-import {Trace} from "../trace/Trace";
-import {OperationsType} from "./constants";
-import {Connection, FieldInfo, MysqlError, queryCallback, QueryOptions} from "mysql";
-import {MysqlMock} from "./mocks/mysql";
+import {Connection} from "mysql";
 import {MysqlIntegration} from "./mysqlIntegration";
 
 const shimmer = require("shimmer");
-const logger = require('../logger')
-const {Integrations} = require("./integrations");
-
-interface IQueryData {
-    response: any
-    fields?: any
-}
-
-interface IParsedArgs {
-    statement: string;
-    values: any[] | undefined;
-    originalCallback: queryCallback;
-}
 
 export class Mysql2Integration extends MysqlIntegration implements IIntegration {
     protected tracer: Tracer;
@@ -65,7 +48,7 @@ export class Mysql2Integration extends MysqlIntegration implements IIntegration 
 
             if (this.env === Environments.DEBUG) {
                 shimmer.wrap(mysql2, 'createConnection', this.wrapMockCreateConnection())
-                shimmer.wrap(mysql2, 'createPool', this.wrapMockCreateConnection())
+                shimmer.wrap(mysql2, 'createPool', this.wrapMockCreatePool())
             } else {
             }
         }
