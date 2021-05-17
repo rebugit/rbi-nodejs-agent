@@ -3,7 +3,7 @@ import {
     hashQuery,
     query,
     query2,
-    query2WithPool,
+    query2WithPool, query2WithPromise,
     queryWithKnex, queryWithPool,
     queryWithSequelize,
     queryWithTypeORM
@@ -103,6 +103,17 @@ describe('MySql Integration production mode', function () {
             const s = hashQuery(...args);
 
             const response = await query2(...args);
+
+            expect(tracer.traces).toHaveLength(1)
+            expect(tracer.traces[0].correlationId).toBe(s)
+            expect(response).toEqual(parse(tracer.traces[0].data).response)
+        });
+
+        it('should correctly integrate with native mysql2 driver promise', async function () {
+            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
+            const s = hashQuery(...args);
+
+            const response = await query2WithPromise(...args);
 
             expect(tracer.traces).toHaveLength(1)
             expect(tracer.traces[0].correlationId).toBe(s)

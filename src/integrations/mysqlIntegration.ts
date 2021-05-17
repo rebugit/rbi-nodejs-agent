@@ -159,12 +159,12 @@ export class MysqlIntegration extends Integrations implements IIntegration {
             return mockQuery.call(this)
         }
 
+        const correlationId = this.hashSha1(statement);
+        logger.info(`CorrelationId: ${correlationId}`, this.namespace)
+
+        const data = this.tracesLoader.get<IQueryData>(correlationId)
+
         const wrappedCallback = () => {
-            const correlationId = this.hashSha1(statement);
-            logger.info(`CorrelationId: ${correlationId}`, this.namespace)
-
-            const data = this.tracesLoader.get<IQueryData>(correlationId)
-
             originalCallback(null, data.response, data.fields)
         }
 
@@ -174,11 +174,11 @@ export class MysqlIntegration extends Integrations implements IIntegration {
             newArgs[1] = wrappedCallback
         }
 
-        const mockQuery = () => {
+        const mockQueryWithCallback = () => {
             wrappedCallback()
         }
 
-        return mockQuery.call(this)
+        return mockQueryWithCallback.call(this)
     }
 
     protected mockConnect(...args) {
@@ -197,6 +197,12 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         }
     }
 
+    protected mockOnce(event: string | symbol, listener: (...args: any[]) => void): void {
+        if (event === 'connect') {
+            listener()
+        }
+    }
+
     protected wrapMockCreateConnection() {
         const integration = this
         return function (createConnection) {
@@ -207,12 +213,20 @@ export class MysqlIntegration extends Integrations implements IIntegration {
                 connection.connect = integration.mockConnect
                 connection.end = integration.mockEnd
                 connection.query = integration.mockQuery
-                connection.once = function (event: string | symbol, listener: (...args: any[]) => void) {
-                    if (event === 'connect') {
-                        listener()
+                connection.once = integration.mockOnce
+                connection.state = 'connected'
+                connection.threadId = 1
+
+                if (integration._mysql2) {
+                    /**
+                     * This is an extreme hack for mysql2, mysql2 will create a connection inside
+                     * the createConnection method; in debug mode will throw an error, however
+                     * the whole mocking operation will be successful.
+                     * Mocking this method will prevent 'ECONNREFUSED' error from leaking out.
+                     */
+                    connection._notifyError = () => {
                     }
                 }
-                connection.state = 'connected'
 
                 return connection
             };
@@ -235,7 +249,8 @@ export class MysqlIntegration extends Integrations implements IIntegration {
                     }
                 }
                 pool.state = 'connected'
-                pool.release = function () {}
+                pool.release = function () {
+                }
                 pool.getConnection = function (...args) {
                     args[0](null, pool)
                 }
@@ -273,6 +288,8 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         /**
          * if there are two arguments:
          * (options: string | QueryOptions, callback?: queryCallback)
+         * or in mysql2
+         * (query: string, values: any[])
          */
         if (newArgs.length === 2) {
             if (typeof rawQueryOrOptions === 'string') {

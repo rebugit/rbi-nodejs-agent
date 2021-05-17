@@ -2,7 +2,7 @@ import {Tracer} from "../../src/trace/Tracer";
 import {
     query,
     query2,
-    query2WithPool,
+    query2WithPool, query2WithPromise,
     queryWithKnex,
     queryWithPool,
     queryWithSequelize,
@@ -93,11 +93,19 @@ describe('MySql Integration debug mode', function () {
             mysqlIntegration2.end()
         });
 
-        // There is probably a bug in mysql2 streams mock implementation
-        it.skip('should correctly integrate with native mysql driver', async function () {
+        it('should correctly integrate with native mysql driver', async function () {
             const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
 
             const response = await query2(...args);
+
+            expect(tracer.traces).toHaveLength(0)
+            expect(response).toEqual(parse(traces[0].data).response)
+        });
+
+        it('should correctly integrate with native mysql driver with promises', async function () {
+            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
+
+            const response = await query2WithPromise(...args);
 
             expect(tracer.traces).toHaveLength(0)
             expect(response).toEqual(parse(traces[0].data).response)

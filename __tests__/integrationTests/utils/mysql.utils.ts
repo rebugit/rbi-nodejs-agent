@@ -4,6 +4,7 @@ import * as typeORM from "typeorm";
 
 const mysql = require('mysql');
 const mysql2 = require('mysql2');
+const mysql2Promise = require('mysql2/promise');
 
 const connectionInfo = {
     host: 'localhost',
@@ -23,9 +24,6 @@ export const query = async (...args) => {
                 throw err;
             }
         });
-
-        const listeners = connection.listeners('error');
-        console.log(listeners);
 
         connection.query(...args, (error, results, fields) => {
             if (error) {
@@ -65,14 +63,6 @@ export const query2 = async (...args) => {
     return new Promise((resolve, reject) => {
         const connection = mysql2.createConnection(connectionInfo);
 
-        connection.connect(err => {
-            console.log("CONNECT CALLED")
-            if (err) {
-                console.log("Connection", err.message)
-                throw err;
-            }
-        });
-
         connection.query(...args, (error, results, fields) => {
             if (error) {
                 return reject(error)
@@ -89,8 +79,9 @@ export const query2 = async (...args) => {
 }
 
 export const query2WithPromise = async (...args) => {
-    const connection = await mysql2.createConnection(connectionInfo);
+    const connection = await mysql2Promise.createConnection(connectionInfo);
     const [row, fields] = await connection.query(...args);
+    await connection.end()
     return row
 }
 
