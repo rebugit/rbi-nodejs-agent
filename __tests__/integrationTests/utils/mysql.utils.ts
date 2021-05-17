@@ -85,6 +85,25 @@ export const query2WithPromise = async (...args) => {
     return row
 }
 
+export const query2PreparedStatement = async (...args) => {
+    return new Promise((resolve, reject) => {
+        const connection = mysql2.createConnection(connectionInfo);
+
+        connection.execute(...args, (error, results, fields) => {
+            if (error) {
+                return reject(error)
+            }
+
+            connection.end((err) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(results);
+            });
+        });
+    });
+}
+
 export const query2WithPool = async (...args) => {
     return new Promise((resolve, reject) => {
         const pool = mysql2.createPool(connectionInfo);

@@ -1,7 +1,7 @@
 import {Tracer} from "../../src/trace/Tracer";
 import {
     query,
-    query2,
+    query2, query2PreparedStatement,
     query2WithPool, query2WithPromise,
     queryWithKnex,
     queryWithPool,
@@ -106,6 +106,15 @@ describe('MySql Integration debug mode', function () {
             const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
 
             const response = await query2WithPromise(...args);
+
+            expect(tracer.traces).toHaveLength(0)
+            expect(response).toEqual(parse(traces[0].data).response)
+        });
+
+        it('should correctly integrate with native mysql driver with prepared statement', async function () {
+            const args = ['SELECT (1 + ?) * ? AS result', [4, 2]]
+
+            const response = await query2PreparedStatement(...args);
 
             expect(tracer.traces).toHaveLength(0)
             expect(response).toEqual(parse(traces[0].data).response)

@@ -226,6 +226,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
                      */
                     connection._notifyError = () => {
                     }
+                    connection.execute = integration.mockQuery
                 }
 
                 return connection
@@ -288,8 +289,6 @@ export class MysqlIntegration extends Integrations implements IIntegration {
         /**
          * if there are two arguments:
          * (options: string | QueryOptions, callback?: queryCallback)
-         * or in mysql2
-         * (query: string, values: any[])
          */
         if (newArgs.length === 2) {
             if (typeof rawQueryOrOptions === 'string') {
