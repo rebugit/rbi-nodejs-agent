@@ -10,7 +10,7 @@ import {
 } from "./utils/mysql.utils";
 import {parse} from "flatted";
 // @ts-ignore
-import {Mysql, Mysql2} from '../../dist/integrations';
+import {Mysql, Mysql2} from '../../src/integrations';
 import {TracesLoader} from "../../src/trace/TracesLoader";
 import {clearEnvironmentVariables} from "../utils";
 
@@ -19,7 +19,6 @@ describe('MySql Integration production mode', function () {
 
     beforeEach(function () {
         tracer = new Tracer()
-        process.env.REBUGIT_LOG = 'ALL'
     });
 
     afterEach(function () {

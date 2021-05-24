@@ -9,7 +9,7 @@ import {
     queryWithTypeORM
 } from "./utils/mysql.utils";
 // @ts-ignore
-import {Mysql, Mysql2} from '../../dist/integrations';
+import {Mysql, Mysql2} from '../../src/integrations';
 import {TracesLoader} from "../../src/trace/TracesLoader";
 import {traces} from "./utils/mysql.data"
 import {clearEnvironmentVariables} from "../utils";
