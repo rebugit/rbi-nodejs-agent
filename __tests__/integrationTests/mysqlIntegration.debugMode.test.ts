@@ -19,7 +19,6 @@ describe('MySql Integration debug mode', function () {
     let tracer: Tracer;
 
     beforeEach(function () {
-        process.env.REBUGIT_LOG = 'ALL'
         process.env.REBUGIT_ENV = 'debug'
         tracer = new Tracer()
     });

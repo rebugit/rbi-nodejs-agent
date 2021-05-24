@@ -4,12 +4,8 @@ const https = require("https");
 const superagent = require('superagent')
 const got = require('got')
 const axios = require("axios");
-const {Sequelize} = require("sequelize");
-const {Client, Pool} = require('pg');
 const AWS = require('aws-sdk');
 const MongoClient = require('mongodb').MongoClient;
-const mongo = require('mongodb');
-const mysql = require('mysql');
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient({
     region: 'ap-southeast-1'
@@ -23,8 +19,6 @@ const RESPONSE_BODY = {
     "title": "delectus aut autem",
     "userId": 1,
 }
-const DB_CONNECTION_URI = 'postgres://postgres:postgres@localhost:5432/postgres'
-const DB_QUERY = 'SELECT 1 + 5 * $1 AS result'
 
 const requestWithHttp = (isHttps = false) => new Promise((resolve, reject) => {
     const options = {
@@ -162,84 +156,6 @@ const getRequestWithAWSSDK = async () => {
     return dynamoDb.get(params).promise()
 }
 
-
-const sequelizeQuery = async (value) => {
-    const sequelize = new Sequelize(DB_CONNECTION_URI, {
-        logging: console.log,
-        dialect: 'postgres'
-    })
-    const res = await sequelize.query('SELECT 1 + 5 * :multi AS result', {
-        replacements: {
-            'multi': value
-        }
-    })
-    return res[0][0].result
-}
-
-const pgQuery = async (value) => {
-    const client = new Client({
-        connectionString: DB_CONNECTION_URI
-    })
-    await client.connect()
-    const res = await client.query('SELECT 1 + 5 * $1 AS result', [value])
-    await client.end()
-    return res.rows[0].result
-}
-
-const pgPoolQuery = async (value) => {
-    const pool = new Pool({
-        connectionString: DB_CONNECTION_URI
-    })
-    const client = await pool.connect()
-    const res = await client.query('SELECT 1 + 5 * $1 AS result', [value])
-    await client.release(true)
-    return res.rows[0].result
-}
-
-const knexQuery = async (value) => {
-    const pg = require('knex')({
-        client: 'pg',
-        connection: DB_CONNECTION_URI,
-    });
-
-    const res = await pg.raw('SELECT 1 + 5 * ? AS result', value)
-    await pg.destroy()
-    return res.rows[0].result
-}
-
-const mysqlQuery = async (...args) => {
-    return new Promise((resolve, reject) => {
-        const connection = mysql.createConnection({
-            host: 'localhost',
-            user: 'root',
-            database: 'mysql',
-            password: 'mysql',
-        });
-
-        connection.connect(err => {
-            if (err) {
-                console.log("Connection", err.message)
-                return;
-            }
-            console.log('connected as id ' + connection.threadId);
-        });
-
-        connection.query(...args, (error, results, fields) => {
-            if (error) {
-                return reject(error)
-            }
-
-            connection.end((err) => {
-                if (err) {
-                    // Resolve even though there is an error.
-                    return reject(err);
-                }
-                return resolve(results);
-            });
-        });
-    });
-}
-
 const mongodb = async () => {
     const url = 'mongodb://localhost:27017';
     const dbName = 'testdb';
@@ -257,12 +173,6 @@ const mongodb = async () => {
     return result
 }
 
-const sha1 = (value) => {
-    const hash = crypto.createHash('sha1')
-    hash.update(value)
-    return hash.digest('hex')
-}
-
 const clearEnvironmentVariables = () => {
     for (const key of Object.keys(process.env)) {
         if (key.toUpperCase().startsWith('REBUGIT_')) {
@@ -278,17 +188,10 @@ module.exports = {
     requestWithAxios,
     requestWithHttpStreams,
     clearEnvironmentVariables,
-    pgQuery,
-    pgPoolQuery,
-    sequelizeQuery,
-    sha1,
-    knexQuery,
     postRequestWithAWSSDK,
     getRequestWithAWSSDK,
     postRequestWithGot,
     mongodb,
-    mysqlQuery,
-    DB_QUERY,
     REQUEST_BASE_URL,
     PATH,
     RESPONSE_BODY

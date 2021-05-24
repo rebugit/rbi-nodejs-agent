@@ -15,15 +15,19 @@ import {
 } from "./utils/postgresql.utils";
 import {parse} from "flatted";
 import each from 'jest-each';
+import {traces} from "./utils/postgresql.data";
 
-describe('PostgreSQL integration production mode', function () {
+describe('PostgreSQL integration debug mode', function () {
     const DB_QUERY = 'SELECT 1 + 5 * $1 AS result'
     let postgresIntegration: PostgresIntegration
     let tracer: Tracer
 
     beforeEach(function () {
+        // process.env.REBUGIT_LOG = 'ALL'
+        process.env.REBUGIT_ENV = 'debug'
         tracer = new Tracer()
         const tracesLoader = new TracesLoader()
+        tracesLoader.load(traces)
         postgresIntegration = new Pg()
         postgresIntegration.init(tracer, tracesLoader, {})
     });
@@ -41,16 +45,14 @@ describe('PostgreSQL integration production mode', function () {
         ['typeORM', queryWithTypeORM, [DB_QUERY, [4]]],
     ])
         .it('should capture %s response correctly', async function (clientName, client, args) {
-            const s = hashQuery(...args);
-
             const response = await client(...args);
 
-            expect(tracer.traces).toHaveLength(1)
-            expect(tracer.traces[0].correlationId).toBe(s)
+            expect(tracer.traces).toHaveLength(0)
             if (clientName === 'sequelize' || clientName === 'typeORM') {
-                expect(response).toEqual(parse(tracer.traces[0].data).rows)
+                // @ts-ignore
+                expect(response).toEqual(parse(traces[0].data).rows)
             } else {
-                expect(response.rows).toEqual(parse(tracer.traces[0].data).rows)
+                expect(response.rows).toEqual(parse(traces[0].data).rows)
             }
         });
 });
