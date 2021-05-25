@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import {OperationsType} from "./constants";
+import {IncomingHttpHeaders} from "http";
 
 export class Integrations {
     protected env: any;
@@ -25,8 +26,8 @@ export class Integrations {
         }
     }
 
-    protected getCorrelationId = (method: string, host: string, path: string, headers: { [key: string]: string }): string => {
-        if (host.includes('amazonaws.com')) {
+    protected getCorrelationId = (method: string, host: string, path: string, headers: IncomingHttpHeaders): string => {
+        if (host.includes('amazonaws.com') || headers['X-Amz-Target']) {
             this._counter++
             const target = headers['X-Amz-Target'];
             return `${method}_${host}${path || ''}_${target}_${this._counter}`
@@ -36,9 +37,9 @@ export class Integrations {
         return `${method}_${host}${path}_${this._counter}`
     }
 
-    protected getOperationType = (host: string): string => {
-        if (host.includes('amazonaws.com')) {
-            const service = host.split(".")[0];
+    protected getOperationType = (headers: IncomingHttpHeaders): string => {
+        if (headers['X-Amz-Target']) {
+            const service = (headers['X-Amz-Target'] as string).split("_")[0];
             return service.toUpperCase()
         }
 

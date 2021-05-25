@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run test:units && npm run test:integrations:debugmode && npm run test:integrations:prodmode",
     "test:units": "jest __tests__/unitTests",
-    "test:integrations:prodmode": "(cd __tests__/integrationTests/utils && docker-compose up -d mysql postgres) && jest __tests__/integrationTests/*\\.prodMode.test.ts; (cd __tests__/integrationTests/utils && docker-compose stop)",
+    "test:integrations:prodmode": "(cd __tests__/integrationTests/utils && docker-compose up -d mysql postgres httpserver dynamodb) && jest __tests__/integrationTests/*\\.prodMode.test.ts && (cd __tests__/integrationTests/utils && docker-compose stop)",
     "test:integrations:debugmode": "jest __tests__/integrationTests/*\\.debugMode.test.ts",
     "build": "tsc"
   },
@@ -33,7 +33,9 @@
     "@types/node": "^14.14.31",
     "@types/pg": "^7.14.10",
     "@types/shimmer": "^1.0.1",
+    "aws-sdk": "^2.912.0",
     "axios": "^0.21.1",
+    "express": "^4.17.1",
     "got": "^11.8.2",
     "husky": "^4.0.0",
     "jest": "^26.6.3",
@@ -59,6 +61,7 @@
     "modulePathIgnorePatterns": [
       "__tests__/integrationTests/utils"
     ],
-    "preset": "ts-jest"
+    "preset": "ts-jest",
+    "testURL": "http://localhost:8080/todo/1"
   }
 }

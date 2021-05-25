@@ -6,7 +6,6 @@ import {Tracer} from '../../src/trace/Tracer';
 import {TracesLoader} from '../../src/trace/TracesLoader';
 import {clearEnvironmentVariables} from "../utils";
 import {
-    hashQuery,
     query,
     queryWithKnex,
     queryWithPool,
@@ -23,7 +22,6 @@ describe('PostgreSQL integration debug mode', function () {
     let tracer: Tracer
 
     beforeEach(function () {
-        // process.env.REBUGIT_LOG = 'ALL'
         process.env.REBUGIT_ENV = 'debug'
         tracer = new Tracer()
         const tracesLoader = new TracesLoader()

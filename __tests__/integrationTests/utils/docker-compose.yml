@@ -34,3 +34,12 @@ services:
     image: redis:4.0-alpine
     ports:
       - "127.0.0.1:6379:6379"
+  httpserver:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+  dynamodb:
+    image: amazon/dynamodb-local:1.13.4
+    ports:
+      - "8000:8000"
