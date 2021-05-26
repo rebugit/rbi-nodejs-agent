@@ -63,14 +63,12 @@ export const requestWithHttpStreams = async () => new Promise((resolve, reject) 
     };
 
     const req = http.request(options, (res) => {
-        console.log(`${options.host} : ${res.statusCode}`);
         res.setEncoding('utf8');
         let output = '';
 
         res.on("readable", () => {
             let chunk;
             while (null !== (chunk = res.read())) {
-                console.log(chunk)
                 output += chunk;
             }
         });
