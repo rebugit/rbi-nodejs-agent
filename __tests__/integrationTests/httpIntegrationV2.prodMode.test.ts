@@ -1,4 +1,5 @@
-import {HttpIntegration} from "../../src/integrations/httpIntegration";
+// @ts-ignore
+import {HttpV2} from '../../src/integrations'
 import {Tracer} from "../../src/trace/Tracer";
 import {TracesLoader} from "../../src/trace/TracesLoader";
 import {clearEnvironmentVariables} from "../utils";
@@ -13,17 +14,18 @@ import each from 'jest-each';
 import {parse} from "flatted";
 import {getRequestWithDynamodb, putRequestWithDynamodb, seedDynamodbTable} from "./utils/http.aws-sdk.utils";
 import {dynamodbGetItemResponseBody} from "./utils/http.aws-sdk.data";
+import {HttpIntegrationV2} from "../../src/integrations/httpIntegrationV2";
 
-describe.skip('HttpIntegration', function () {
+describe('HttpIntegrationV2 prod mode', function () {
     describe('Normal http requests', function () {
-        let httpIntegration: HttpIntegration
+        let httpIntegration: HttpIntegrationV2
         let tracer: Tracer
 
-        beforeEach(function () {
+        beforeEach(async function () {
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
-            httpIntegration = new HttpIntegration()
-            httpIntegration.init(tracer, tracesLoader, {})
+            httpIntegration = new HttpV2()
+            await httpIntegration.init(tracer, tracesLoader, {})
         });
 
         afterEach(function () {
@@ -59,7 +61,7 @@ describe.skip('HttpIntegration', function () {
     });
 
     describe('AWS-SDK', function () {
-        let httpIntegration: HttpIntegration
+        let httpIntegration: HttpIntegrationV2
         let tracer: Tracer
 
         beforeAll(async function () {
@@ -69,8 +71,8 @@ describe.skip('HttpIntegration', function () {
         beforeEach(async function () {
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
-            httpIntegration = new HttpIntegration()
-            httpIntegration.init(tracer, tracesLoader, {})
+            httpIntegration = new HttpV2()
+            await httpIntegration.init(tracer, tracesLoader, {})
         });
 
         afterEach(function () {
