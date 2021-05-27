@@ -98,7 +98,7 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
         return new Promise((resolve, reject) => {
             childProcess.once('message', (mes) => {
                 if (mes === 'serverReady') {
-                    logger.info('Debugger connected!', this.namespace)
+                    logger.info('Server ready', this.namespace)
                     return resolve('connected');
                 }
 
@@ -114,6 +114,7 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
             [],
             {
                 detached: false,
+                execArgv: []
             },
         )
     }
@@ -139,44 +140,10 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
                 integration.sendDataChildProcess(integration._childProcess, data)
                 newArgs[0].host = 'localhost'
                 newArgs[0].port = 52000
+                newArgs[0].hostname = 'localhost'
 
                 return request.apply(this, newArgs)
             }
-        }
-    }
-
-    private parseArgs(...newArgs: any[]) {
-        let options: RequestOptions | any = newArgs[0];
-
-        let method = ''
-        if (options.method) {
-            method = options.method.toUpperCase();
-        } else {
-            method = arguments[1].method;
-        }
-
-        const host = options.hostname || options.host || 'localhost'
-        options = typeof options === 'string' ? url.parse(options) : options;
-        let path = options.path || options.pathname || '/';
-        const headers = options.headers || {}
-        const port = options.port
-
-        let originalCallback
-        if (options.callback) {
-            originalCallback = options.callback
-        } else { // @ts-ignore
-            if (typeof arguments[1] === "function") {
-                originalCallback = arguments[1]
-            } else if (arguments[2] && typeof arguments[2] === 'function') {
-                originalCallback = arguments[2]
-            }
-        }
-
-        return {
-            options: {
-                method, host, path, headers, port
-            },
-            callback: originalCallback
         }
     }
 
@@ -234,6 +201,41 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
         }
     }
 
+    private parseArgs(...newArgs: any[]) {
+        let options: RequestOptions | any = newArgs[0];
+
+        let method = ''
+        if (options.method) {
+            method = options.method.toUpperCase();
+        } else {
+            method = arguments[1].method;
+        }
+
+        const host = options.hostname || options.host || 'localhost'
+        options = typeof options === 'string' ? url.parse(options) : options;
+        let path = options.path || options.pathname || '/';
+        const headers = options.headers || {}
+        const port = options.port
+
+        let originalCallback
+        if (options.callback) {
+            originalCallback = options.callback
+        } else { // @ts-ignore
+            if (typeof arguments[1] === "function") {
+                originalCallback = arguments[1]
+            } else if (arguments[2] && typeof arguments[2] === 'function') {
+                originalCallback = arguments[2]
+            }
+        }
+
+        return {
+            options: {
+                method, host, path, headers, port
+            },
+            callback: originalCallback
+        }
+    }
+
     end(): void {
         if (this.env === Environments.DEBUG) {
             this.killChildProcess(this._childProcess)
@@ -243,11 +245,14 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
         if (this._http) {
             shimmer.unwrap(this._http, 'request');
             logger.info(`unwrap http integration`, this.namespace)
+            this._http = null
+
         }
 
         if (this._https) {
             shimmer.unwrap(this._https, 'request');
             logger.info(`unwrap https integration`, this.namespace)
+            this._https = null
         }
     }
 }

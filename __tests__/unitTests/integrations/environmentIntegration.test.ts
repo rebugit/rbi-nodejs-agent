@@ -20,6 +20,7 @@ describe('EnvironmentIntegration', function () {
         process.env.CUSTOM_ENV_3 = 'env3'
         process.env.CUSTOM_ENV_BLACKLISTED = 'env4'
         process.env.REBUGIT_SOMETHING = 'debug'
+        process.env.PATH = "something:something"
 
         const tracer = new Tracer()
         const tracesLoader = new TracesLoader()
@@ -75,7 +76,8 @@ describe('EnvironmentIntegration', function () {
             REBUGIT_ENV: 'debug',
             CUSTOM_ENV_1: 'env1',
             CUSTOM_ENV_2: 'env2',
-            CUSTOM_ENV_3: 'env3'
+            CUSTOM_ENV_3: 'env3',
+            PATH: 'something:something'
         })
     });
 });

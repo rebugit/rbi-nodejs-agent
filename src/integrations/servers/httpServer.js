@@ -5,6 +5,7 @@ let response = ""
 process.on('message', (data) => {
   const parsedMessage = JSON.parse(data)
   if (parsedMessage.type === 'data') {
+    require('inspector').close()
     console.log('data received')
     response = parsedMessage.data
   }
@@ -24,14 +25,6 @@ const composeResponse = (res, response) => {
 }
 
 const requestListener = function (req, res) {
-  // res.on('finish', () => {
-  //   console.log('shutting down...')
-  //   server.close(() => {
-  //     console.log('sever closed')
-  //     process.exit(0)
-  //   })
-  // });
-
   composeResponse(res, response)
 }
 

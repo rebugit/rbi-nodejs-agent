@@ -10,8 +10,14 @@ const request = require('request')
 const app = express()
 const port = 9000
 const AWS = require('aws-sdk');
+
+process.env.REBUGIT_LOG = 'ALL'
+
 const Rebugit = new RebugitSDK({
-    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0SWQiOiIxNWY5MjJlNy0zZGJiLTQwMWMtOTJiOS1mODE3ODZlODExMmMiLCJ0ZW5hbnRJZCI6IjY5YTM0YzU4LTQ1ZGMtNDNkZi1hODc2LTY0MzM5NWQ4OTJlMCJ9.EsXiWTOabQuvEbjlBDZf_F8TMKz036xUjchpsGNBjCs',
+    apiKey: process.env.REBUGIT_API_KEY,
+    collector: {
+        collectorBaseUrl: "dev.api.rebugit.com"
+    }
 })
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient({
@@ -35,7 +41,7 @@ const pg = new Pool({
     database: 'postgres',
     host: 'localhost',
     password: 'postgres',
-    port: 5433
+    port: 5435
 })
 const sequelize = new Sequelize('postgres://postgres:postgres@localhost:5433/postgres') // Example for postgres
 const getDataFromDatabase = async () => {
@@ -48,7 +54,7 @@ const getDataFromDatabase = async () => {
         return res[0][0].result
     }
 
-    const client = await pg.connect()
+    const client = await pg.connect();
     const res = await client.query('SELECT 1 + 5 * $1 AS result', [4])
     await client.release()
     return res.rows[0].result
@@ -67,7 +73,6 @@ const callExternalAPI = async () => {
     if (isAxios){
         const resp = await axios.get('http://jsonplaceholder.typicode.com/todos/1')
         return resp.data
-        // return requestWithRequest()
     } else {
         const options = {
             host: 'jsonplaceholder.typicode.com',

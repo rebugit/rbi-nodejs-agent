@@ -244,11 +244,7 @@ export class MysqlIntegration extends Integrations implements IIntegration {
                 pool.connect = integration.mockConnect
                 pool.end = integration.mockEnd
                 pool.query = integration.mockQuery
-                pool.once = function (event: string | symbol, listener: (...args: any[]) => void) {
-                    if (event === 'connect') {
-                        listener()
-                    }
-                }
+                pool.once = integration.mockOnce
                 pool.state = 'connected'
                 pool.release = function () {
                 }

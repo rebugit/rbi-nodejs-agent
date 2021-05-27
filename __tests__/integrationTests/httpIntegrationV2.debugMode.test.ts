@@ -1,7 +1,5 @@
 import {Tracer} from "../../src/trace/Tracer";
 import {TracesLoader} from "../../src/trace/TracesLoader";
-// @ts-ignore
-import {HttpV2} from "../../src/integrations"
 import {HTTP_RESPONSE_BODY, traces as httpTraces} from "./utils/http.data"
 import {dynamodbGetItemResponseBodyDebugMode, traces as awsTraces} from "./utils/http.aws-sdk.data"
 import {clearEnvironmentVariables} from "../utils";
@@ -27,7 +25,7 @@ describe('HttpIntegrationV2 debug mode', function () {
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
             tracesLoader.load(httpTraces)
-            httpIntegrationV2 = new HttpV2()
+            httpIntegrationV2 = new HttpIntegrationV2()
             await httpIntegrationV2.init(tracer, tracesLoader, {})
         });
 
@@ -70,7 +68,7 @@ describe('HttpIntegrationV2 debug mode', function () {
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
             tracesLoader.load(awsTraces)
-            httpIntegrationV2 = new HttpV2()
+            httpIntegrationV2 = new HttpIntegrationV2()
             await httpIntegrationV2.init(tracer, tracesLoader, {})
         });
 

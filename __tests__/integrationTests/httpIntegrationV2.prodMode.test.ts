@@ -1,5 +1,3 @@
-// @ts-ignore
-import {HttpV2} from '../../src/integrations'
 import {Tracer} from "../../src/trace/Tracer";
 import {TracesLoader} from "../../src/trace/TracesLoader";
 import {clearEnvironmentVariables} from "../utils";
@@ -24,7 +22,7 @@ describe('HttpIntegrationV2 prod mode', function () {
         beforeEach(async function () {
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
-            httpIntegration = new HttpV2()
+            httpIntegration = new HttpIntegrationV2()
             await httpIntegration.init(tracer, tracesLoader, {})
         });
 
@@ -71,7 +69,7 @@ describe('HttpIntegrationV2 prod mode', function () {
         beforeEach(async function () {
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
-            httpIntegration = new HttpV2()
+            httpIntegration = new HttpIntegrationV2()
             await httpIntegration.init(tracer, tracesLoader, {})
         });
 

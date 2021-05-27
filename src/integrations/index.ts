@@ -7,7 +7,6 @@ import {Mysql2Integration} from "./mysql2Integration";
 import {HttpIntegrationV2} from "./httpIntegrationV2";
 
 const {PostgresIntegration} = require("./postgresIntegration");
-const {HttpIntegration} = require("./httpIntegration");
 const {EnvironmentIntegration} = require('./environmentIntegration')
 
 export interface IIntegration {
