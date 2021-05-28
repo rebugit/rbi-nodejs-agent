@@ -1,4 +1,4 @@
-import {Integrations} from "../../src/integrations/integrations";
+import {Integrations} from "../../../src/integrations/integrations";
 
 describe('Integration main class', function () {
     it('should correctly require a module', function () {
@@ -41,7 +41,7 @@ describe('Integration main class', function () {
     it('should get operationType', function () {
         const ints = new Integrations()
         const result = ints['getOperationType'](
-            'jsonplaceholder.typicode.com',
+            {'custom-header': 'jsonplaceholder.typicode.com'},
         );
 
         expect(result).toBe('RESPONSE')
@@ -51,7 +51,7 @@ describe('Integration main class', function () {
     it('should get operationType for aws services', function () {
         const ints = new Integrations()
         const result = ints['getOperationType'](
-            'dynamodb.ap-southeast-1.amazonaws.com',
+            { 'X-Amz-Target': 'DynamoDB_20120810'},
         );
 
         expect(result).toBe('DYNAMODB')

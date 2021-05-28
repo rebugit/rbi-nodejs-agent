@@ -47,28 +47,25 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
     private selectEnvVariables(): { [key: string]: string } {
         const env: { [key: string]: string } = {}
         for (const key of Object.keys(process.env)) {
-            // Skip the PATH variables
-            if (key === "PATH") {
-                continue
-            }
+            if (this.isBlackListed(key)) continue;
+            if (this.isRebugitVariable(key)) continue;
 
-            // Skip any blacklisted fields from the configuration
-            const blacklistFromConfig = this.configuration.blackListFields || []
-            // merge the user supplied list with our own internal list
-            const fullBlacklist = [...blacklistFromConfig, ...blacklistEnvironment]
-            if (fullBlacklist) {
-                if (fullBlacklist.includes(key)) {
-                    continue
-                }
-            }
-
-            // Do not save our env variables (they might interfere)
-            if (!key.toUpperCase().startsWith('REBUGIT_')) {
-                env[key] = process.env[key]
-            }
+            env[key] = process.env[key]
         }
 
         return env
+    }
+
+    private isBlackListed(key: string): boolean {
+        // Skip any blacklisted fields from the configuration
+        const blacklistFromConfig = this.configuration.blackListFields || []
+        // merge the user supplied list with our own internal list
+        const fullBlacklist = [...blacklistFromConfig, ...blacklistEnvironment]
+        return fullBlacklist && fullBlacklist.includes(key)
+    }
+
+    private isRebugitVariable(key: string): boolean {
+        return key.toUpperCase().startsWith('REBUGIT_')
     }
 
     private injectEnvironment(env: { [key: string]: string }) {
@@ -81,12 +78,13 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
      * This method will clean up our process environment variables.
      * It won't delete our SDK variables
      */
-    private cleanEnvironment(){
+    private cleanEnvironment() {
         Object.keys(process.env).forEach(key => {
-            if (key.toUpperCase().startsWith('REBUGIT_')) return
+            if (this.isRebugitVariable(key)) return;
+            if (this.isBlackListed(key)) return;
             delete process.env[key]
         })
     }
 }
 
-const blacklistEnvironment = []
+const blacklistEnvironment = ["PATH"]

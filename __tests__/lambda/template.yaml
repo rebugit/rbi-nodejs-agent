@@ -23,6 +23,7 @@ Globals:
         REBUGIT_LOG: ALL
         NODE_TLS_REJECT_UNAUTHORIZED: 0
         REBUGIT_COLLECTOR_HOST: host.docker.internal
+        REBUGIT_API_KEY:
 
 Resources:
   ExampleFunction:

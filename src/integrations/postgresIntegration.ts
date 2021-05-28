@@ -6,6 +6,7 @@ import {FieldDef, QueryResult} from "pg";
 import {Trace} from "../trace/Trace";
 import {PgMock} from "./mocks/pg";
 import {Environments} from "../sharedKernel/constants";
+import {OperationsType} from "./constants";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -42,6 +43,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         this.config = config || {}
 
         this.wrapMockConnect = this.wrapMockConnect.bind(this);
+        this.getStatement = this.getStatement.bind(this);
 
         const pg = this.require("pg");
         if (pg) {
@@ -205,7 +207,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
             this.getExtraFieldsFromRes(value, data)
 
             const trace = new Trace({
-                operationType: 'QUERY',
+                operationType: OperationsType.POSTGRES_QUERY,
                 correlationId,
                 data
             })
@@ -260,7 +262,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
         }
 
         if (values) {
-            text = this.replaceArgs(text, values);
+            text = this.replaceSqlQueryArgs(text, values);
         }
 
         return text;
@@ -270,7 +272,7 @@ export class PostgresIntegration extends Integrations implements IIntegration {
      * Replace all query parameters
      * Ex: SELECT 1 + $1 AS result, [4] => SELECT 1 + 5 AS result
      */
-    private replaceArgs(statement: string, values: any[]): string {
+    private replaceSqlQueryArgs(statement: string, values: any[]): string {
         const args = Array.prototype.slice.call(values);
         const replacer = (value: string) => args[parseInt(value.substr(1), 10) - 1];
 
@@ -297,7 +299,10 @@ export class PostgresIntegration extends Integrations implements IIntegration {
     end() {
         if (this._pg) {
             shimmer.unwrap(this._pg.Client.prototype, 'query')
-            shimmer.unwrap(this._pg.Client.prototype, 'connect')
+
+            if (this.env === Environments.DEBUG) {
+                shimmer.unwrap(this._pg.Client.prototype, 'connect')
+            }
         }
     }
 }

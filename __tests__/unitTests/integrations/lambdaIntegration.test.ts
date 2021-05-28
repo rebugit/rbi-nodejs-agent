@@ -1,15 +1,15 @@
-import {LambdaIntegration} from "../../src/integrations/lambdaIntegration";
-import {Tracer} from "../../src/trace/Tracer";
-import {ITraceServiceApi} from "../../src/trace/Api";
-import {TracesLoader} from "../../src/trace/TracesLoader";
-import {ITrace} from "../../src/trace/Trace";
+import {LambdaIntegration} from "../../../src/integrations/lambdaIntegration";
+import {Tracer} from "../../../src/trace/Tracer";
+import {ITraceServiceApi} from "../../../src/trace/Api";
+import {TracesLoader} from "../../../src/trace/TracesLoader";
+import {ITrace} from "../../../src/trace/Trace";
 import {Context} from "aws-lambda";
-import {CorrelationIds, Environments} from "../../src/sharedKernel/constants";
-import {OperationsType} from "../../src/integrations/constants";
+import {CorrelationIds, Environments} from "../../../src/sharedKernel/constants";
+import {OperationsType} from "../../../src/integrations/constants";
 import {parse, stringify} from "flatted";
 import Mock = jest.Mock;
 import Spy = jest.SpyInstance;
-import {clearEnvironmentVariables} from "../utils";
+import {clearEnvironmentVariables} from "../../utils";
 
 
 class MockApi implements ITraceServiceApi {

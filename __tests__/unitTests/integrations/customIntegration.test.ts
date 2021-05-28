@@ -1,8 +1,8 @@
-import {CustomIntegration} from "../../src/integrations/customIntegration";
-import {TracesLoader} from "../../src/trace/TracesLoader";
-import {ITrace} from "../../src/trace/Trace";
+import {CustomIntegration} from "../../../src/integrations/customIntegration";
+import {TracesLoader} from "../../../src/trace/TracesLoader";
+import {ITrace} from "../../../src/trace/Trace";
 import {stringify} from "flatted";
-import {Tracer} from "../../src/trace/Tracer";
+import {Tracer} from "../../../src/trace/Tracer";
 
 const mockModule = {
     methodToShim: (num) => {

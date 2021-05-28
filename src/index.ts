@@ -4,7 +4,7 @@ import {TracesLoader} from "./trace/TracesLoader";
 import {IGlobalConfig} from "./config";
 import {CustomIntegration} from "./integrations/customIntegration";
 import {Tracer} from "./trace/Tracer";
-import {CorrelationIds, Environments} from "./sharedKernel/constants";
+import {Environments} from "./sharedKernel/constants";
 import {Callback, Context} from "aws-lambda"
 import {LambdaIntegration} from "./integrations/lambdaIntegration";
 
@@ -35,13 +35,13 @@ class RebugitSDK {
         logger.info(`Environment: ${this.env}`)
     }
 
-    _initIntegrations(tracer) {
+    async _initIntegrations(tracer) {
         for (const key of Object.keys(integrations)) {
             const Integration = integrations[key];
             if (Integration) {
                 const instance: IIntegration = new Integration();
                 const config = this.config.integrationsConfig && this.config.integrationsConfig[key]
-                instance.init(tracer, this.tracesLoader, config)
+                await instance.init(tracer, this.tracesLoader, config)
                 this.integrations.set(key, instance)
                 logger.info(`wrap ${key} integration`)
             }
@@ -93,7 +93,7 @@ class RebugitSDK {
                     handlerIntegration.injectTraceToRequest(req, span)
                     logger.info(`handler trace injected into request object`)
 
-                    this._initIntegrations(tracer)
+                    await this._initIntegrations(tracer)
 
                     return next()
                 } else {

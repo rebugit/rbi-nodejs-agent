@@ -107,3 +107,5 @@ dist
 .DS_store
 
 __tests__/integrations/debug.js
+__tests__/expressjs/env.sh
+__tests__/lambda/env.sh

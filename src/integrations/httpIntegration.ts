@@ -162,8 +162,9 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 const host = options.hostname || options.host || 'localhost'
                 options = typeof options === 'string' ? url.parse(options) : options;
                 let path = options.path || options.pathname || '/';
-                const headers = options.headers
+                const headers = options.headers || {}
                 const correlationId = integration.getCorrelationId(method, host, path, headers);
+                const operationType = integration.getOperationType(headers);
 
                 logger.info(`correlation id: ${correlationId}`, integration.namespace)
 
@@ -213,7 +214,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                                 const obj: ITrace = {
                                     data,
                                     correlationId,
-                                    operationType: integration.getOperationType(host)
+                                    operationType: operationType
                                 }
 
                                 const trace = new Trace(obj);
