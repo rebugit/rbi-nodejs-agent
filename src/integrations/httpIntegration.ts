@@ -20,6 +20,10 @@ interface IHttpTraceData {
     statusMessage: string
 }
 
+/**
+ * Legacy integration
+ * @deprecated
+ */
 export class HttpIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
     private tracesLoader: TracesLoader;

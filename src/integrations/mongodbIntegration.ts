@@ -3,11 +3,13 @@ import {Tracer} from "../trace/Tracer";
 import {TracesLoader} from "../trace/TracesLoader";
 import {IIntegration} from "./index";
 import {Environments} from "../sharedKernel/constants";
-import {MongoDBCommandTypes} from "./constants";
+import {OperationsType} from "./constants";
+import {Trace} from "../trace/Trace";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
 const {Integrations} = require("./integrations");
+const BSON = require('bson')
 
 export class MongodbIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
@@ -16,14 +18,15 @@ export class MongodbIntegration extends Integrations implements IIntegration {
     private config: IIntegrationConfig;
     private readonly namespace: string;
     private mongodb: any;
+    private _trace: Trace;
+    private blacklistedCommands: string[];
 
     constructor() {
         super()
 
         this.env = process.env.REBUGIT_ENV
         this.namespace = 'mongodbIntegration'
-
-        this.handleResponse = this.handleResponse.bind(this);
+        this.blacklistedCommands = ['endSessions']
     }
 
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -45,31 +48,34 @@ export class MongodbIntegration extends Integrations implements IIntegration {
                 instrument.on('started', this.onStarted.bind(this))
                 instrument.on('failed', this.onFailed.bind(this))
                 instrument.on('succeeded', this.onSuccess.bind(this))
-                shimmer.wrap(mongodb.MongoClient.prototype, 'db', this.wrap())
+                shimmer.wrap(mongodb.MongoClient, 'connect', this.wrap())
             }
         }
     }
 
     private wrap() {
         const integration = this
-        return function (client) {
+        return function (connect) {
             return function (...args): any {
-                logger.info(`executing main wrapper`, integration.namespace)
-                console.log(args)
-                console.log(client.toString())
-                return client.apply(this, args)
+                logger.info(`executing connect wrapper`, integration.namespace)
+                return connect.apply(this, args)
             };
         }
     }
 
     private onStarted(event: any) {
         try {
-            let hostPort: string[];
             const commandName: string = event.commandName
-            const commandNameUpper: string = commandName.toUpperCase();
+            if (this.blacklistedCommands.includes(commandName)) {
+                return
+            }
+            logger.info(`onStarted command: ${commandName}`, this.namespace)
+
+            let hostPort: string[];
             const collectionName: string = event.command[commandName];
             const dbName: string = event.databaseName;
             const connectionId = event.connectionId;
+            const requestId = event.requestId
             if (typeof connectionId === 'object') {
                 hostPort = [
                     connectionId.host,
@@ -82,10 +88,14 @@ export class MongodbIntegration extends Integrations implements IIntegration {
                 hostPort = address.split(':', 2);
             }
 
-            const operationType = MongoDBCommandTypes[commandNameUpper];
-            const correlationId = this.getCorrelationIdMongo(hostPort, dbName, collectionName, commandName);
-            logger.info(`correlationId: ${correlationId}`, this.namespace)
+            const correlationId = this.getCorrelationIdMongo(hostPort, dbName, collectionName, commandName, requestId);
+            this._trace = new Trace({
+                operationType: OperationsType.MONGODB_QUERY,
+                correlationId,
+                data: {}
+            })
 
+            logger.info(`correlationId: ${correlationId}`, this.namespace)
         } catch (error) {
             console.log(error)
         }
@@ -97,25 +107,26 @@ export class MongodbIntegration extends Integrations implements IIntegration {
     }
 
     private onSuccess(event: any) {
-        logger.info("Success", this.namespace)
-        logger.info(event)
+        if (this._trace) {
+            const commandName = event.commandName
+            logger.info(`onSuccess event command: ${commandName}`, this.namespace)
+
+            this._trace.data = event
+            this.tracer.add(this._trace.trace())
+            this._trace = null
+        }
     }
 
     protected getCorrelationIdMongo(
         hostPort: string[],
         dbName: string,
         collectionName: string,
-        commandName: string
+        commandName: string,
+        requestId: string
     ): string {
         const host = hostPort[0];
         const port = hostPort.length === 2 ? hostPort[1] : '';
-        return `${host}:${port}_${dbName}_${collectionName}_${commandName}`
-    }
-
-    private handleResponse(value: any, statement: string): any {
-        if (this.env === 'debug') {
-        } else {
-        }
+        return `${host}:${port}_${dbName}_${collectionName}_${commandName}_${requestId}`
     }
 
     private getExtraFieldsFromRes(res: any, data: any) {
@@ -127,5 +138,8 @@ export class MongodbIntegration extends Integrations implements IIntegration {
     }
 
     end() {
+        if (this.mongodb) {
+            shimmer.unwrap(this.mongodb.MongoClient, 'connect')
+        }
     }
 }

@@ -10,7 +10,11 @@ export interface ITrace {
 export class Trace {
     private readonly _correlationId: string;
     private readonly _operationType: string;
-    private readonly _data: string;
+    private _data: string;
+
+    set data(value: string) {
+        this._data = value;
+    }
 
     constructor(span: ITrace) {
         this._correlationId = span.correlationId
