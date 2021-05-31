@@ -5,11 +5,11 @@ import {IIntegration} from "./index";
 import {Environments} from "../sharedKernel/constants";
 import {OperationsType} from "./constants";
 import {Trace} from "../trace/Trace";
+import cloneDeep from "lodash.clonedeep";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
 const {Integrations} = require("./integrations");
-const BSON = require('bson')
 
 export class MongodbIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
@@ -18,8 +18,8 @@ export class MongodbIntegration extends Integrations implements IIntegration {
     private config: IIntegrationConfig;
     private readonly namespace: string;
     private mongodb: any;
-    private _trace: Trace;
     private blacklistedCommands: string[];
+    private traceMap: { [key: string]: Trace };
 
     constructor() {
         super()
@@ -27,6 +27,7 @@ export class MongodbIntegration extends Integrations implements IIntegration {
         this.env = process.env.REBUGIT_ENV
         this.namespace = 'mongodbIntegration'
         this.blacklistedCommands = ['endSessions']
+        this.traceMap = {}
     }
 
     init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -72,6 +73,7 @@ export class MongodbIntegration extends Integrations implements IIntegration {
             logger.info(`onStarted command: ${commandName}`, this.namespace)
 
             let hostPort: string[];
+            const command: any = event.command
             const collectionName: string = event.command[commandName];
             const dbName: string = event.databaseName;
             const connectionId = event.connectionId;
@@ -88,8 +90,8 @@ export class MongodbIntegration extends Integrations implements IIntegration {
                 hostPort = address.split(':', 2);
             }
 
-            const correlationId = this.getCorrelationIdMongo(hostPort, dbName, collectionName, commandName, requestId);
-            this._trace = new Trace({
+            const correlationId = this.getCorrelationIdMongo(hostPort, dbName, collectionName, commandName, command);
+            this.traceMap[requestId] = new Trace({
                 operationType: OperationsType.MONGODB_QUERY,
                 correlationId,
                 data: {}
@@ -97,7 +99,7 @@ export class MongodbIntegration extends Integrations implements IIntegration {
 
             logger.info(`correlationId: ${correlationId}`, this.namespace)
         } catch (error) {
-            console.log(error)
+            logger.error(error, this.namespace)
         }
     }
 
@@ -107,13 +109,19 @@ export class MongodbIntegration extends Integrations implements IIntegration {
     }
 
     private onSuccess(event: any) {
-        if (this._trace) {
+        try {
             const commandName = event.commandName
-            logger.info(`onSuccess event command: ${commandName}`, this.namespace)
+            const requestId = event.requestId
+            if (!this.blacklistedCommands.includes(commandName)) {
+                logger.info(`onSuccess event command: ${commandName}`, this.namespace)
 
-            this._trace.data = event
-            this.tracer.add(this._trace.trace())
-            this._trace = null
+                const currentTrace = this.traceMap[requestId]
+                currentTrace.data = event
+                this.tracer.add(currentTrace.trace())
+                delete this.traceMap[requestId]
+            }
+        } catch (e) {
+            logger.error(e, this.namespace)
         }
     }
 
@@ -122,11 +130,24 @@ export class MongodbIntegration extends Integrations implements IIntegration {
         dbName: string,
         collectionName: string,
         commandName: string,
-        requestId: string
+        command: any
     ): string {
+        let stringCommand
+        const clonedCommand = cloneDeep(command);
+        delete clonedCommand.lsid
+        if (commandName === 'insert') {
+            clonedCommand.documents = clonedCommand.documents.map(doc => {
+                delete doc._id
+                delete doc.__v
+            })
+            stringCommand = JSON.stringify(clonedCommand)
+        } else {
+            stringCommand = JSON.stringify(clonedCommand)
+        }
         const host = hostPort[0];
         const port = hostPort.length === 2 ? hostPort[1] : '';
-        return `${host}:${port}_${dbName}_${collectionName}_${commandName}_${requestId}`
+        const id = `${host}:${port}_${dbName}_${collectionName}_${commandName}_${stringCommand}`
+        return this.hashSha1(id)
     }
 
     private getExtraFieldsFromRes(res: any, data: any) {
@@ -139,6 +160,7 @@ export class MongodbIntegration extends Integrations implements IIntegration {
 
     end() {
         if (this.mongodb) {
+            this.traceMap = {}
             shimmer.unwrap(this.mongodb.MongoClient, 'connect')
         }
     }

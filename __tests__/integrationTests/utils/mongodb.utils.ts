@@ -1,17 +1,33 @@
 import mongodb, {Collection, MongoClient} from 'mongodb'
 import mongoose, {Model} from 'mongoose'
 
-const MONGO_URL = 'mongodb://localhost:27017';
+const MONGO_URL = 'mongodb://localhost:27017/testDB';
 
-export const getMongooseClientSchema = async (): Model<any> => {
+export const getMongooseModel = async (): Model<any> => {
     await mongoose.connect(MONGO_URL, {useNewUrlParser: true, useUnifiedTopology: true});
     // @ts-ignore
-    return mongoose.model('testCollection', {name: String})
+    return mongoose.model('testCollection', {a: String})
 }
 
-export const insertMongooseCollection = async (Model: Model<any>) => {
-    const model = new Model({ a: '1' });
-    await model.save()
+export const insertMongooseCollection = async (Model: Model<any>, docs: any[]) => {
+    const promises = docs.map(doc => {
+        const model = new Model(doc);
+        return model.save()
+    })
+
+    return await Promise.all(promises)
+}
+
+export const findAllWithMongoose = async (Model: Model<any>) => {
+    return Model.find({})
+}
+
+export const dropMongooseModel = async (Model: Model<any>) => {
+    await Model.collection.drop();
+}
+
+export const closeMongooseConnection = async () => {
+    await mongoose.connection.close()
 }
 
 export const getCollectionClient = async (): Promise<{ collection: Collection, client: MongoClient }> => {
