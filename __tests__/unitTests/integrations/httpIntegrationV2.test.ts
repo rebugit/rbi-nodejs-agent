@@ -66,7 +66,7 @@ describe('httpIntegration', function () {
                     let obj = JSON.parse(output);
                     expect(obj).toEqual(RESPONSE_BODY)
                     expect(tracer.traces.length).toBe(1)
-                    expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1_1')
+                    expect(tracer.traces[0].correlationId).toBe('GET_jsonplaceholder.typicode.com/todos/1')
                     expect(tracer.traces[0].data).toBeDefined()
                     expect(tracer.traces[0].operationType).toBe(OperationsType.RESPONSE)
                     done()
@@ -86,7 +86,8 @@ describe('httpIntegration', function () {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Amz-Target': 'DynamoDB_20120810.GetItem'
+                    'X-Amz-Target': 'DynamoDB_20120810.GetItem',
+                    'X-Amz-Content-Sha256': '123'
                 }
             };
 
@@ -106,7 +107,7 @@ describe('httpIntegration', function () {
             const req = mockHttp.request(options, (res) => {
                 res.on('end', () => {
                     expect(tracer.traces.length).toBe(1)
-                    expect(tracer.traces[0].correlationId).toBe('GET_dynamodb.ap-southeast-1.amazonaws.com/_DynamoDB_20120810.GetItem_1')
+                    expect(tracer.traces[0].correlationId).toBe('GET_dynamodb.ap-southeast-1.amazonaws.com/_DynamoDB_20120810.GetItem_123')
                     expect(tracer.traces[0].data).toBeDefined()
                     expect(tracer.traces[0].operationType).toBe('DYNAMODB')
                     done()

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run test:units && npm run test:integrations:debugmode && npm run test:integrations:prodmode",
     "test:units": "jest __tests__/unitTests",
-    "test:integrations:prodmode": "(cd __tests__/integrationTests/utils && docker-compose up -d mysql postgres httpserver dynamodb) && jest __tests__/integrationTests/*\\.prodMode.test.ts && (cd __tests__/integrationTests/utils && docker-compose stop)",
+    "test:integrations:prodmode": "(cd __tests__/integrationTests/utils && docker-compose up -d mysql postgres httpserver dynamodb mongo) && jest __tests__/integrationTests/*\\.prodMode.test.ts && (cd __tests__/integrationTests/utils && docker-compose stop)",
     "test:integrations:debugmode": "jest __tests__/integrationTests/*\\.debugMode.test.ts",
     "build": "tsc"
   },

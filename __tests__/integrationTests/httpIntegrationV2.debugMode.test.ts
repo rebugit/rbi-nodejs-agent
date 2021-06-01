@@ -4,6 +4,7 @@ import {HTTP_RESPONSE_BODY, traces as httpTraces} from "./utils/http.data"
 import {dynamodbGetItemResponseBodyDebugMode, traces as awsTraces} from "./utils/http.aws-sdk.data"
 import {clearEnvironmentVariables} from "../utils";
 import {
+    postRequestWithGot,
     requestWithAxios,
     requestWithGot,
     requestWithHttp,
@@ -56,6 +57,12 @@ describe('HttpIntegrationV2 debug mode', function () {
 
             expect(response).toEqual(HTTP_RESPONSE_BODY)
         });
+
+        it('should integrate with got post request', async function () {
+            const response = await postRequestWithGot();
+
+            expect(response).toEqual(HTTP_RESPONSE_BODY)
+        });
     });
 
     describe('AWS-SDK', function () {
@@ -63,7 +70,6 @@ describe('HttpIntegrationV2 debug mode', function () {
         let httpIntegrationV2: HttpIntegrationV2
 
         beforeEach(async function () {
-            process.env.REBUGIT_LOG = 'ALL'
             process.env.REBUGIT_ENV = 'debug'
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()

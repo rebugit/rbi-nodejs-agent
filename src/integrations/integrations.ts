@@ -1,14 +1,12 @@
 import crypto from 'crypto'
 import {OperationsType} from "./constants";
-import {IncomingHttpHeaders} from "http";
+import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
 
 export class Integrations {
     protected env: any;
-    private _counter: number;
 
     constructor() {
         this.env = process.env.REBUGIT_ENV || 'dev'
-        this._counter = 0
     }
 
     private static isModulePresent(moduleName): string | undefined {
@@ -26,18 +24,34 @@ export class Integrations {
         }
     }
 
-    protected getCorrelationId = (method: string, host: string, path: string, headers: IncomingHttpHeaders): string => {
-        if (host.includes('amazonaws.com') || headers['X-Amz-Target']) {
-            this._counter++
-            const target = headers['X-Amz-Target'];
-            return `${method}_${host}${path || ''}_${target}_${this._counter}`
-        }
-
-        this._counter++
-        return `${method}_${host}${path}_${this._counter}`
+    protected isAWSRequest(host: string, headers: OutgoingHttpHeaders): boolean {
+        return !!(host.includes('amazonaws.com') || headers['X-Amz-Target']);
     }
 
-    protected getOperationType = (headers: IncomingHttpHeaders): string => {
+    private getAWSCorrelationId(method: string, host: string, path: string, headers: OutgoingHttpHeaders): string {
+        const target = headers['X-Amz-Target'];
+        const signedPayload = headers['X-Amz-Content-Sha256'] as string
+        return `${method}_${host}${path || ''}_${target}_${signedPayload}`
+    }
+
+    private getStandardCorrelationId = (method: string, host: string, path: string, headers: OutgoingHttpHeaders, body: string): string => {
+        if (body) {
+            return `${method}_${host}${path}_${this.hashSha1(body)}`
+        }
+
+        return `${method}_${host}${path}`
+    }
+
+    // TODO change correlationId calculation
+    protected getCorrelationId = (method: string, host: string, path: string, headers: OutgoingHttpHeaders, body: string): string => {
+        if (this.isAWSRequest(host, headers)) {
+            return this.getAWSCorrelationId(method, host, path, headers)
+        }
+
+        return this.getStandardCorrelationId(method, host, path, headers, body)
+    }
+
+    protected getOperationType = (headers: OutgoingHttpHeaders): string => {
         if (headers['X-Amz-Target']) {
             const service = (headers['X-Amz-Target'] as string).split("_")[0];
             return service.toUpperCase()

@@ -41,7 +41,7 @@ describe('MongoDB Integration', function () {
         await client.close()
 
         expect(tracer.traces.length).toBe(3)
-        expect(tracer.traces[1].correlationId).toBe('627857935c771e3fd9953c1b21381641646b8891')
+        expect(tracer.traces[1].correlationId).toBe('127.0.0.1:27017_testDB_testCollection_find_62d86fba75ec71165edaeb78d940d7b357539e32')
         expect(tracer.traces[1].operationType).toBe(OperationsType.MONGODB_QUERY)
         expect(response).toEqual(parse(tracer.traces[1].data).reply.cursor.firstBatch.map(doc => ({
             ...doc,
@@ -58,7 +58,7 @@ describe('MongoDB Integration', function () {
         await closeMongooseConnection()
 
         expect(tracer.traces.length).toBe(5)
-        expect(tracer.traces[1].correlationId).toBe('cdd2b0e1e68e4c42094d8ff9e81b6ef9bc7fcdfc')
+        expect(tracer.traces[1].correlationId).toBe('127.0.0.1:27017_testDB_testcollections_insert_5a61e80988de2abc4076eb794e870b29569d72e3')
         expect(tracer.traces[1].operationType).toBe(OperationsType.MONGODB_QUERY)
         expect(response.map(doc => delete doc._id)).toEqual(parse(tracer.traces[3].data).reply.cursor.firstBatch.map(doc => delete doc._id))
     });

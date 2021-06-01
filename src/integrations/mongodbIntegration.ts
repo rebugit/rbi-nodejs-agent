@@ -125,6 +125,9 @@ export class MongodbIntegration extends Integrations implements IIntegration {
         }
     }
 
+    /**
+     * TODO: explain the logic
+     */
     protected getCorrelationIdMongo(
         hostPort: string[],
         dbName: string,
@@ -146,8 +149,7 @@ export class MongodbIntegration extends Integrations implements IIntegration {
         }
         const host = hostPort[0];
         const port = hostPort.length === 2 ? hostPort[1] : '';
-        const id = `${host}:${port}_${dbName}_${collectionName}_${commandName}_${stringCommand}`
-        return this.hashSha1(id)
+        return `${host}:${port}_${dbName}_${collectionName}_${commandName}_${this.hashSha1(stringCommand)}`
     }
 
     private getExtraFieldsFromRes(res: any, data: any) {

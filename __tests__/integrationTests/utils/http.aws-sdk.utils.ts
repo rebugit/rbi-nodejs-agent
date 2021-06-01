@@ -1,4 +1,5 @@
 import {DynamoDB} from "aws-sdk";
+import {DeleteTableInput, CreateTableInput, PutItemInput, GetItemInput} from "aws-sdk/clients/dynamodb"
 
 const DYNAMODB_ENDPOINT = 'http://localhost:8000'
 const DYNAMODB_TABLE_NAME = 'CUSTOMER_LIST'
@@ -14,8 +15,15 @@ const dynamoDbDocumentClient = new DynamoDB.DocumentClient({
     endpoint: DYNAMODB_ENDPOINT
 });
 
+export const dropDynamodbTable = async () => {
+    const params: DeleteTableInput = {
+        TableName: DYNAMODB_TABLE_NAME
+    }
+    await dynamoDb.deleteTable(params).promise()
+}
+
 export const seedDynamodbTable = async () => {
-    const params = {
+    const params: CreateTableInput = {
         AttributeDefinitions: [
             {
                 AttributeName: 'CUSTOMER_ID',
@@ -48,7 +56,7 @@ export const seedDynamodbTable = async () => {
 
     await dynamoDb.createTable(params).promise()
 
-    const customer1 = {
+    const customer1: PutItemInput = {
         TableName: DYNAMODB_TABLE_NAME,
         Item: {
             'CUSTOMER_ID': {S: '001'},
@@ -57,7 +65,7 @@ export const seedDynamodbTable = async () => {
         }
     };
 
-    const customer2 = {
+    const customer2: PutItemInput = {
         TableName: DYNAMODB_TABLE_NAME,
         Item: {
             'CUSTOMER_ID': {S: '002'},
