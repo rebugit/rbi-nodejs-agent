@@ -42,7 +42,6 @@ export class Integrations {
         return `${method}_${host}${path}`
     }
 
-    // TODO change correlationId calculation
     protected getCorrelationId = (method: string, host: string, path: string, headers: OutgoingHttpHeaders, body: string): string => {
         if (this.isAWSRequest(host, headers)) {
             return this.getAWSCorrelationId(method, host, path, headers)

@@ -140,12 +140,12 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
         return (request) => {
             return function (...args: any[]) {
                 const newArgs = [...args]
-                const {options} = integration.parseArgs(...newArgs);
 
                 newArgs[0].host = 'localhost'
                 newArgs[0].port = 52000
                 newArgs[0].hostname = 'localhost'
 
+                const {options} = integration.parseArgs(...newArgs);
                 const req = request.apply(this, newArgs)
 
                 let body: string
@@ -220,7 +220,9 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
                         originalWrite.call(this, ...args)
                     }
 
-                    // Some packages (AWS sdk) do not call the `.write` function and pass the body via headers
+                    // If the request has no body we will compute the correlationId here
+                    // Since the `.write` method won't be called
+                    // Some packages (AWS sdk) pass the body via headers
                     correlationId = integration.getCorrelationId(options.method, options.host, options.path, options.headers, body);
                     logger.info(`correlation id: ${correlationId}`, integration.namespace);
 
