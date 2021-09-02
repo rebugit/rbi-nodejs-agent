@@ -1,7 +1,7 @@
 import {DynamoDB} from "aws-sdk";
 import {DeleteTableInput, CreateTableInput, PutItemInput, GetItemInput} from "aws-sdk/clients/dynamodb"
 
-const DYNAMODB_ENDPOINT = 'http://localhost:8000'
+const DYNAMODB_ENDPOINT = `http://${process.env.TEST_HOST}:8000`
 const DYNAMODB_TABLE_NAME = 'CUSTOMER_LIST'
 
 const dynamoDb = new DynamoDB({

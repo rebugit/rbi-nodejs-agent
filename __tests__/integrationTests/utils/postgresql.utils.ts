@@ -3,7 +3,7 @@ import crypto from "crypto";
 import * as typeORM from "typeorm";
 
 const connectionInfo = {
-    host: 'localhost',
+    host: process.env.TEST_HOST,
     user: 'postgres',
     database: 'postgres',
     password: 'postgres',

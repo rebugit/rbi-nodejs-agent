@@ -1,7 +1,7 @@
 import mongodb, {Collection, MongoClient} from 'mongodb'
 import mongoose, {Model} from 'mongoose'
 
-const MONGO_URL = 'mongodb://localhost:27017/testDB';
+const MONGO_URL = `mongodb://${process.env.TEST_HOST}:27017/testDB`;
 
 export const getMongooseModel = async (): Model<any> => {
     await mongoose.connect(MONGO_URL, {useNewUrlParser: true, useUnifiedTopology: true});

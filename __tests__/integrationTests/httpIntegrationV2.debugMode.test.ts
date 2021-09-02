@@ -71,6 +71,8 @@ describe('HttpIntegrationV2 debug mode', function () {
 
         beforeEach(async function () {
             process.env.REBUGIT_ENV = 'debug'
+            process.env.AWS_ACCESS_KEY_ID = 'fake_access_key'
+            process.env.AWS_SECRET_ACCESS_KEY = 'fake_secret_access_key'
             tracer = new Tracer()
             const tracesLoader = new TracesLoader()
             tracesLoader.load(awsTraces)
