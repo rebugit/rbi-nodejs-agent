@@ -42,11 +42,11 @@ export class MongodbIntegration extends Integrations implements IIntegration {
         this.tracesLoader = tracesLoader
         this.config = config || {}
 
-        if (this.env === Environments.DEBUG) {
-            const childProcess = this.spawnServer();
-            this._childProcess = childProcess
-            await this.waitForServerToBeReady(childProcess)
-        }
+        // if (this.env === Environments.DEBUG) {
+        //     const childProcess = this.spawnServer();
+        //     this._childProcess = childProcess
+        //     await this.waitForServerToBeReady(childProcess)
+        // }
 
         const mongodb = this.require("mongodb");
         if (mongodb) {
@@ -54,7 +54,7 @@ export class MongodbIntegration extends Integrations implements IIntegration {
 
             if (this.env === Environments.DEBUG) {
                 // const instrument = mongodb.instrument();
-                shimmer.wrap(mongodb.MongoClient, 'connect', this.wrapMock())
+                // shimmer.wrap(mongodb.MongoClient, 'connect', this.wrapMock())
             } else {
                 const instrument = mongodb.instrument();
                 instrument.on('started', this.onStarted.bind(this))
