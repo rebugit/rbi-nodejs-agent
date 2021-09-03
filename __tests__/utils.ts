@@ -1,4 +1,7 @@
 import * as crypto from "crypto";
+import util from 'util';
+import dns from 'dns';
+const lookup = util.promisify(dns.lookup);
 
 export const sha1 = (value: string): string => {
     const hash = crypto.createHash('sha1')
@@ -13,3 +16,7 @@ export const clearEnvironmentVariables = (): void => {
         }
     }
 };
+
+export async function nslookup(domainName) {
+    return (await (lookup(domainName))).address
+}
