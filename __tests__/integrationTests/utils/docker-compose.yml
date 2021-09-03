@@ -14,7 +14,7 @@ services:
       - MYSQL_ROOT_PASSWORD=mysql
       - MYSQL_DATABASE=mysql
     ports:
-      - "127.0.0.1:3306:3306"
+      - "3306:3306"
   mongo:
     image: bitnami/mongodb:3.6.11
     restart: always
@@ -29,11 +29,11 @@ services:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms64m -Xmx64m"
     ports:
-      - "127.0.0.1:9200:9200"
+      - "9200:9200"
   redis:
     image: redis:4.0-alpine
     ports:
-      - "127.0.0.1:6379:6379"
+      - "6379:6379"
   httpserver:
     build:
       context: .

@@ -6,8 +6,8 @@
   "scripts": {
     "test": "npm run test:units && npm run test:integrations:debugmode && npm run test:integrations:prodmode",
     "test:units": "jest __tests__/unitTests",
-    "test:integrations:prodmode": "(cd __tests__/integrationTests/utils && docker-compose up -d mysql postgres httpserver dynamodb) && jest __tests__/integrationTests/*\\.prodMode.test.ts && (cd __tests__/integrationTests/utils && docker-compose stop)",
-    "test:integrations:debugmode": "jest __tests__/integrationTests/*\\.debugMode.test.ts",
+    "test:integrations:prodmode": "(cd __tests__/integrationTests/utils && docker-compose up -d mysql postgres httpserver dynamodb mongo) && TEST_HOST=docker jest __tests__/integrationTests/*\\.prodMode.test.ts && (cd __tests__/integrationTests/utils && docker-compose stop)",
+    "test:integrations:debugmode": "TEST_HOST=localhost jest __tests__/integrationTests/*\\.debugMode.test.ts",
     "build": "tsc"
   },
   "keywords": [
@@ -17,7 +17,9 @@
   "author": "Matteo Gioioso",
   "license": "MIT",
   "dependencies": {
+    "bson": "^1.1.6",
     "flatted": "^3.1.1",
+    "lodash.clonedeep": "^4.5.0",
     "shimmer": "^1.2.1",
     "uuid": "^8.3.2"
   },
@@ -28,6 +30,7 @@
     "@types/aws-lambda": "^8.10.72",
     "@types/aws-sdk": "^2.7.0",
     "@types/jest": "^26.0.20",
+    "@types/mongodb": "^3.6.16",
     "@types/mysql": "^2.15.18",
     "@types/node": "^14.14.31",
     "@types/pg": "^7.14.10",
@@ -41,6 +44,7 @@
     "jest-each": "^26.6.2",
     "knex": "^0.95.5",
     "mongodb": "^3.6.6",
+    "mongoose": "^5.12.12",
     "mysql": "^2.18.1",
     "mysql2": "^2.2.5",
     "pg": "^8.6.0",

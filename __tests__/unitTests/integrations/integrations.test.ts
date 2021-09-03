@@ -19,11 +19,19 @@ describe('Integration main class', function () {
         expect(s).toBeUndefined()
     });
 
-    it('should get correlationId', function () {
+    it('should get correlationId without body', function () {
         const ints = new Integrations()
-        const result = ints['getCorrelationId']('POST', 'jsonplaceholder.typicode.com', '/todo/1', {});
+        const result = ints['getCorrelationId']('POST', 'jsonplaceholder.typicode.com', '/todo/1', {}, undefined);
 
-        expect(result).toBe('POST_jsonplaceholder.typicode.com/todo/1_1')
+        expect(result).toBe('POST_jsonplaceholder.typicode.com/todo/1')
+    });
+
+
+    it('should get correlationId with body', function () {
+        const ints = new Integrations()
+        const result = ints['getCorrelationId']('POST', 'jsonplaceholder.typicode.com', '/todo/1', {}, 'hello');
+
+        expect(result).toBe('POST_jsonplaceholder.typicode.com/todo/1_aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d')
     });
 
     it('should get correlationId for aws services', function () {
@@ -32,10 +40,11 @@ describe('Integration main class', function () {
             'POST',
             'dynamodb.ap-southeast-1.amazonaws.com',
             '',
-            {'X-Amz-Target': 'DynamoDB_20120810.GetItem'}
+            {'X-Amz-Target': 'DynamoDB_20120810.GetItem', 'X-Amz-Content-Sha256': '123'},
+            undefined
         );
 
-        expect(result).toBe('POST_dynamodb.ap-southeast-1.amazonaws.com_DynamoDB_20120810.GetItem_1')
+        expect(result).toBe('POST_dynamodb.ap-southeast-1.amazonaws.com_DynamoDB_20120810.GetItem_123')
     })
 
     it('should get operationType', function () {

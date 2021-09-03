@@ -20,6 +20,10 @@ interface IHttpTraceData {
     statusMessage: string
 }
 
+/**
+ * Legacy integration
+ * @deprecated
+ */
 export class HttpIntegration extends Integrations implements IIntegration {
     private tracer: Tracer;
     private tracesLoader: TracesLoader;
@@ -163,6 +167,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 options = typeof options === 'string' ? url.parse(options) : options;
                 let path = options.path || options.pathname || '/';
                 const headers = options.headers || {}
+                // @ts-ignore
                 const correlationId = integration.getCorrelationId(method, host, path, headers);
                 const operationType = integration.getOperationType(headers);
 

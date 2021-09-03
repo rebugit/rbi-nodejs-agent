@@ -77,7 +77,9 @@ describe('EnvironmentIntegration', function () {
             CUSTOM_ENV_1: 'env1',
             CUSTOM_ENV_2: 'env2',
             CUSTOM_ENV_3: 'env3',
-            PATH: 'something:something'
+            PATH: 'something:something',
+            AWS_ACCESS_KEY_ID: 'fake_access_key',
+            AWS_SECRET_ACCESS_KEY: 'fake_secret_access_key'
         })
     });
 });

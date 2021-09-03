@@ -72,6 +72,10 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
         Object.keys(env).forEach(key => {
             process.env[key] = env[key]
         })
+
+        Object.keys(defaultEnvironment).forEach(key => {
+            process.env[key] = defaultEnvironment[key]
+        })
     }
 
     /**
@@ -88,3 +92,9 @@ export class EnvironmentIntegration extends Integrations implements IIntegration
 }
 
 const blacklistEnvironment = ["PATH"]
+const defaultEnvironment = {
+    // We fake AWS credentials to avoid request to the metadata endpoint
+    // or other mechanisms which would be difficult to mock
+    AWS_ACCESS_KEY_ID: 'fake_access_key',
+    AWS_SECRET_ACCESS_KEY: 'fake_secret_access_key'
+}

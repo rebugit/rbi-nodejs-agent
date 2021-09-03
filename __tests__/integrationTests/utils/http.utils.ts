@@ -4,7 +4,7 @@ import superagent from "superagent"
 import axios from "axios";
 import got from "got";
 
-const REQUEST_BASE_URL = 'localhost'
+const REQUEST_BASE_URL = process.env.TEST_HOST
 const PORT = 8080
 const PATH = 'todo/1'
 const FULL_HTTP_PATH = `http://${REQUEST_BASE_URL}:${PORT}/${PATH}`

@@ -7,7 +7,7 @@ const mysql2 = require('mysql2');
 const mysql2Promise = require('mysql2/promise');
 
 const connectionInfo = {
-    host: 'localhost',
+    host: process.env.TEST_HOST,
     user: 'root',
     database: 'mysql',
     password: 'mysql',

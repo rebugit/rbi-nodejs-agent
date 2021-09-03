@@ -127,22 +127,40 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
         process.send(JSON.stringify({type: 'shutdown'}))
     }
 
+    private injectData(options: RequestOptions, body: string) {
+        const correlationId = this.getCorrelationId(options.method, options.host, options.path, options.headers, body);
+        const data = this.tracesLoader.get<IHttpTraceData>(correlationId);
+        logger.info(`correlation id: ${correlationId}`, this.namespace)
+        logger.info(`trace loaded: ${data}`, this.namespace)
+        this.sendDataChildProcess(this._childProcess, data)
+    }
+
     private wrapMock() {
         const integration = this
         return (request) => {
             return function (...args: any[]) {
                 const newArgs = [...args]
-                const {options} = integration.parseArgs(...newArgs);
-                const correlationId = integration.getCorrelationId(options.method, options.host, options.path, options.headers);
-                const data = integration.tracesLoader.get<IHttpTraceData>(correlationId);
-                logger.info(`correlation id: ${correlationId}`, integration.namespace)
-                logger.info(`trace loaded: ${data}`, integration.namespace)
-                integration.sendDataChildProcess(integration._childProcess, data)
+
+                // Change the connections options to be able to connect
+                // to mock server
                 newArgs[0].host = 'localhost'
                 newArgs[0].port = 52000
                 newArgs[0].hostname = 'localhost'
 
-                return request.apply(this, newArgs)
+                const {options} = integration.parseArgs(...newArgs);
+                const req = request.apply(this, newArgs)
+
+                let body: string
+                const originalWrite = req.write
+                req.write = function (...args) {
+                    body = args[0]
+                    integration.injectData(options, body)
+                    originalWrite.call(this, ...args)
+                }
+
+                integration.injectData(options, body)
+
+                return req
             }
         }
     }
@@ -153,10 +171,6 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
             return function (...args: any[]) {
                 const newArgs = [...args]
                 const {options, callback: originalCallback} = integration.parseArgs(...newArgs);
-                const correlationId = integration.getCorrelationId(options.method, options.host, options.path, options.headers);
-                const operationType = integration.getOperationType(options.headers);
-
-                logger.info(`correlation id: ${correlationId}`, integration.namespace)
 
                 try {
                     const wrappedCallback = (res: IncomingMessage) => {
@@ -192,7 +206,31 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
                     };
 
                     newArgs[1] = wrappedCallback
-                    return request.call(this, ...newArgs);
+                    const req = request.call(this, ...newArgs);
+                    const originalWrite = req.write
+
+                    /**
+                     * We need to capture the body which will be used for the correlationId computation
+                     */
+                    let body: string
+                    let correlationId: string
+                    req.write = function (...args) {
+                        body = args[0]
+                        correlationId = integration.getCorrelationId(options.method, options.host, options.path, options.headers, body);
+                        logger.info(`correlation id: ${correlationId}`, integration.namespace);
+
+                        originalWrite.call(this, ...args)
+                    }
+
+                    // If the request has no body we will compute the correlationId here
+                    // Since the `.write` method won't be called
+                    // Some packages (AWS sdk) pass the body via headers
+                    correlationId = integration.getCorrelationId(options.method, options.host, options.path, options.headers, body);
+                    logger.info(`correlation id: ${correlationId}`, integration.namespace);
+
+                    const operationType = integration.getOperationType(options.headers);
+
+                    return req
                 } catch (error) {
                     logger.error(error, integration.namespace)
                     return request.apply(this, arguments);
