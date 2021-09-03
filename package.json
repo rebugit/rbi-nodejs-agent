@@ -17,6 +17,7 @@
   "author": "Matteo Gioioso",
   "license": "MIT",
   "dependencies": {
+    "bson": "^1.1.6",
     "flatted": "^3.1.1",
     "lodash.clonedeep": "^4.5.0",
     "shimmer": "^1.2.1",
