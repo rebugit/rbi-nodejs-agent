@@ -167,6 +167,7 @@ export class HttpIntegration extends Integrations implements IIntegration {
                 options = typeof options === 'string' ? url.parse(options) : options;
                 let path = options.path || options.pathname || '/';
                 const headers = options.headers || {}
+                // @ts-ignore
                 const correlationId = integration.getCorrelationId(method, host, path, headers);
                 const operationType = integration.getOperationType(headers);
 

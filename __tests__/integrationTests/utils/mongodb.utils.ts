@@ -1,4 +1,5 @@
 import mongodb, {Collection, MongoClient} from 'mongodb'
+import {} from 'mongodb/lib/url_parser'
 import mongoose, {Model} from 'mongoose'
 
 const MONGO_URL = `mongodb://${process.env.TEST_HOST}:27017/testDB`;
@@ -31,11 +32,15 @@ export const closeMongooseConnection = async () => {
 }
 
 export const getCollectionClient = async (): Promise<{ collection: Collection, client: MongoClient }> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const MongoClient = mongodb.MongoClient;
         const dbName = 'testDB';
         const collectionName = 'testCollection';
         MongoClient.connect(MONGO_URL, {useNewUrlParser: true, useUnifiedTopology: true}, (err, client) => {
+            if (err) {
+                return reject(err)
+            }
+
             if (client) {
                 const db = client.db(dbName);
                 const collection = db.collection(collectionName);

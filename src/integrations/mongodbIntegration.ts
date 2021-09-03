@@ -6,6 +6,9 @@ import {Environments} from "../sharedKernel/constants";
 import {OperationsType} from "./constants";
 import {Trace} from "../trace/Trace";
 import cloneDeep from "lodash.clonedeep";
+import {ChildProcess, fork} from "child_process";
+import path from "path";
+import {parse, URL} from 'url'
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -20,30 +23,38 @@ export class MongodbIntegration extends Integrations implements IIntegration {
     private mongodb: any;
     private blacklistedCommands: string[];
     private traceMap: { [key: string]: Trace };
+    private mockServerId: string;
+    private mockServerPort: number;
 
     constructor() {
         super()
 
         this.env = process.env.REBUGIT_ENV
         this.namespace = 'mongodbIntegration'
+        this.mockServerId = 'mongodb_ready'
+        this.mockServerPort = 52001
         this.blacklistedCommands = ['endSessions']
         this.traceMap = {}
     }
 
-    init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
+    public async init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
         this.tracer = tracer
         this.tracesLoader = tracesLoader
         this.config = config || {}
+
+        if (this.env === Environments.DEBUG) {
+            const childProcess = this.spawnServer();
+            this._childProcess = childProcess
+            await this.waitForServerToBeReady(childProcess)
+        }
 
         const mongodb = this.require("mongodb");
         if (mongodb) {
             this.mongodb = mongodb
 
-            /**
-             * In debug mode we need to mock extra methods,
-             * one of those is connect since we need to avoid connecting to the physical database
-             */
             if (this.env === Environments.DEBUG) {
+                // const instrument = mongodb.instrument();
+                shimmer.wrap(mongodb.MongoClient, 'connect', this.wrapMock())
             } else {
                 const instrument = mongodb.instrument();
                 instrument.on('started', this.onStarted.bind(this))
@@ -52,6 +63,25 @@ export class MongodbIntegration extends Integrations implements IIntegration {
                 shimmer.wrap(mongodb.MongoClient, 'connect', this.wrap())
             }
         }
+    }
+
+    private wrapMock() {
+        const integration = this;
+        return function (connect) {
+            return function (...args) {
+                const url = new URL(args[0]);
+                url.hostname = "localhost"
+                url.port = integration.mockServerPort.toString()
+                const mockUrl = url.toString();
+                console.log(mockUrl)
+
+                const newArgs = [...args]
+                newArgs[0] = mockUrl
+
+                logger.info(`executing connect wrapper mock`, integration.namespace)
+                return connect.apply(this, newArgs)
+            }
+        };
     }
 
     private wrap() {
@@ -158,6 +188,33 @@ export class MongodbIntegration extends Integrations implements IIntegration {
                 data[field] = res[field]
             })
         }
+    }
+
+
+    private waitForServerToBeReady(childProcess: ChildProcess) {
+        const integration = this
+        return new Promise((resolve, reject) => {
+            childProcess.once('message', (mes) => {
+                if (mes === integration.mockServerId) {
+                    logger.info('Server ready', this.namespace)
+                    return resolve('connected');
+                }
+
+                return reject('failed to connect');
+            });
+        })
+    }
+
+    private spawnServer(): ChildProcess {
+        logger.info('forking process', this.namespace)
+        return fork(
+            path.join(__dirname, 'servers', 'mongodbServer.js'),
+            [],
+            {
+                detached: false,
+                execArgv: []
+            },
+        )
     }
 
     end() {

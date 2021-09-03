@@ -141,6 +141,8 @@ export class HttpIntegrationV2 extends Integrations implements IIntegration {
             return function (...args: any[]) {
                 const newArgs = [...args]
 
+                // Change the connections options to be able to connect
+                // to mock server
                 newArgs[0].host = 'localhost'
                 newArgs[0].port = 52000
                 newArgs[0].hostname = 'localhost'

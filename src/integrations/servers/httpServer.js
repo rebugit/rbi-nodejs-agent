@@ -5,6 +5,8 @@ let response = ""
 process.on('message', (data) => {
   const parsedMessage = JSON.parse(data)
   if (parsedMessage.type === 'data') {
+    // Since we are in another thread, in debug mode this will interfere
+    // with the debugging session, therefore we close the inspector
     require('inspector').close()
     console.log('data received')
     response = parsedMessage.data
