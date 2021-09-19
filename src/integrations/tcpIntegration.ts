@@ -7,6 +7,7 @@ import {ITrace, Trace} from "../trace/Trace";
 import {Environments} from "../sharedKernel/constants";
 import {ChildProcess, fork} from "child_process";
 import path from "path";
+import {ConnectOpts, Socket, SocketConnectOpts, TcpSocketConnectOpts} from "net";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -19,12 +20,17 @@ export class TcpIntegration extends Integrations implements IIntegration {
     private _net: null;
     private isListenerAttached: boolean;
     private _childProcess: ChildProcess;
+    private readonly DEBUG_HOST_NAME: string;
+    private readonly DEBUG_HOST_PORT: number;
+    private _tls: any;
 
     constructor() {
         super()
         this.namespace = 'tcpIntegration'
         this._net = null
         this.isListenerAttached = false
+        this.DEBUG_HOST_NAME = 'localhost'
+        this.DEBUG_HOST_PORT = 52000
     }
 
     public async init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -35,14 +41,21 @@ export class TcpIntegration extends Integrations implements IIntegration {
         const net = this.require("net");
         if (net) {
             this._net = net
-            logger.info(`wrap tcp integration`, this.namespace)
-
             if (this.env === Environments.DEBUG) {
                 shimmer.wrap(net.Socket.prototype, 'connect', this.wrapMockConnect());
                 shimmer.wrap(net.Socket.prototype, 'write', this.wrapMockWrite());
+                logger.info(`wrap tcp integration in debug mode`, this.namespace)
+
+                const tls = this.require("tls");
+                if (tls) {
+                    this._tls = tls
+                    shimmer.wrap(tls, 'connect', this.wrapMockConnectTLS());
+                    logger.info(`wrap tls integration in debug mode`, this.namespace)
+                }
             } else {
                 shimmer.wrap(net.Socket.prototype, 'connect', this.wrapConnect());
                 shimmer.wrap(net.Socket.prototype, 'write', this.wrap());
+                logger.info(`wrap tcp integration`, this.namespace)
             }
         }
 
@@ -53,26 +66,21 @@ export class TcpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private getCorrelation(request: string): string {
-        if (request.includes("HTTP")) {
-            // Remove all the non idempotent headers
-            const newRequest = []
-            request.split('\r\n').forEach(line => {
-                if (line.includes("Host")){
-                    return
-                }
-
-                newRequest.push(line)
-            })
-            console.log(newRequest)
-            return this.hashSha1(newRequest.join(""))
-        } else {
-            return this.hashSha1(request)
+    private getCorrelation(request: string, __socket): string {
+        if (this.env === Environments.DEBUG) {
+            if (request.includes("HTTP")) {
+                /**
+                 * Because we are connecting to a local server we need to change the Host header
+                 */
+                const debugHost = `${this.DEBUG_HOST_NAME}:${this.DEBUG_HOST_PORT}`
+                const originalHost = `${__socket.originalRemoteHost}:${__socket.originalRemotePort}`
+                const originalRequest = request.replace(debugHost, originalHost)
+                return this.hashSha1(originalRequest)
+            }
         }
-    }
+        console.log(request)
 
-    private sendDataChildProcess(process: ChildProcess, data: any) {
-        process.send(JSON.stringify({type: 'data', data}))
+        return this.hashSha1(request)
     }
 
     private killChildProcess(process: ChildProcess) {
@@ -134,13 +142,31 @@ export class TcpIntegration extends Integrations implements IIntegration {
             return function (...args) {
                 const rawData = args[0]
                 this.correlationIdRawData = rawData
-                this.correlationId = integration.getCorrelation(rawData.toString())
+                this.correlationId = integration.getCorrelation(rawData.toString(), this)
 
                 try {
                     return write.apply(this, args);
                 } catch (error) {
-                    console.log(error)
+                    logger.error(error, integration.namespace)
                     return write.apply(this, arguments);
+                }
+            };
+        }
+    }
+
+    private wrapMockConnectTLS() {
+        const integration = this
+        return function (connect) {
+            return function (...args: any[]) {
+                try {
+                    // Effectively _net is never going to be null
+                    // because is contained inside nodejs standard library
+                    // @ts-ignore
+                    const socket = new integration._net.Socket()
+                    return socket.connect(...args)
+                } catch (error) {
+                    logger.error(error, integration.namespace)
+                    throw error
                 }
             };
         }
@@ -150,17 +176,14 @@ export class TcpIntegration extends Integrations implements IIntegration {
         const integration = this
         return function (connect) {
             return function (...args: any[]) {
-                const newArgs = [...args]
-                console.log(newArgs)
-                newArgs[0][0].host = 'localhost'
-                newArgs[0][0].port = '52000'
-                newArgs[0][0].servername = 'localhost'
+                const __self = this
+                const newArgs = integration.normalizeArgs(args, __self)
 
                 try {
                     return connect.apply(this, newArgs);
                 } catch (error) {
                     logger.error(error, integration.namespace)
-                    return connect.apply(this, arguments);
+                    throw error
                 }
             };
         }
@@ -171,9 +194,7 @@ export class TcpIntegration extends Integrations implements IIntegration {
         return (write) => {
             return function (...args) {
                 const rawData = args[0]
-                this.correlationIdRawData = rawData
-                const correlationId = integration.getCorrelation(rawData.toString())
-
+                const correlationId = integration.getCorrelation(rawData.toString(), this)
                 const data = integration.tracesLoader.get<any>(correlationId);
                 logger.info(`correlation id: ${correlationId}`, integration.namespace)
                 logger.info(`trace loaded: ${data}`, integration.namespace)
@@ -182,11 +203,60 @@ export class TcpIntegration extends Integrations implements IIntegration {
                 try {
                     return write.apply(this, args);
                 } catch (error) {
-                    console.log(error)
-                    return write.apply(this, arguments);
+                    logger.error(error, integration.namespace)
+                    throw error
                 }
             };
         }
+    }
+
+    private normalizeArgs(args, __socket): any {
+        if (args[0][0]) {
+            const firstArg = args[0][0]
+            if (this.type(firstArg) === "Object") {
+                __socket.originalRemoteHost = args[0][0].host
+                __socket.originalRemotePort = args[0][0].port
+                args[0][0].host = this.DEBUG_HOST_NAME
+                args[0][0].port = this.DEBUG_HOST_PORT
+                args[0][0].servername = this.DEBUG_HOST_NAME
+                return args
+            }
+
+            if (this.type(firstArg) === "String") {
+
+            }
+
+            if (this.type(firstArg) === "Number") {
+
+            }
+
+        } else {
+            const firstArg = args[0]
+            if (this.type(firstArg) === "Object") {
+                __socket.originalRemoteHost = args[0].host
+                __socket.originalRemotePort = args[0].port
+                const newArgs = []
+                newArgs[0] = {}
+                newArgs[0].host = this.DEBUG_HOST_NAME
+                newArgs[0].port = this.DEBUG_HOST_PORT
+                newArgs[0].servername = this.DEBUG_HOST_NAME
+                newArgs[0].hostname = this.DEBUG_HOST_NAME
+                newArgs[1] = args[1]
+                return newArgs
+            }
+
+            if (this.type(firstArg) === "String") {
+
+            }
+
+            if (this.type(firstArg) === "Number") {
+
+            }
+        }
+    }
+
+    private type(val) {
+        return Object.prototype.toString.call(val).slice(8, -1);
     }
 
     end(): void {
@@ -194,6 +264,10 @@ export class TcpIntegration extends Integrations implements IIntegration {
             if (this.env === Environments.DEBUG) {
                 // @ts-ignore
                 shimmer.unwrap(this._net.Socket.prototype, 'connect');
+                // @ts-ignore
+                shimmer.unwrap(this._net.Socket.prototype, 'write');
+                shimmer.unwrap(this._tls, 'connect')
+
                 this.killChildProcess(this._childProcess)
                 this._childProcess = null
             } else {
