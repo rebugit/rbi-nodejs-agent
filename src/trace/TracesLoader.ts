@@ -1,22 +1,26 @@
 import {ITrace} from "./Trace";
+import {findBestMatch} from "../sharedKernel/utils";
 
 const {parse} = require('flatted');
 
 export class TracesLoader {
-    private readonly traces: {};
+    private traces: {};
+    private tracesCorrelationIds: string[]
 
     constructor() {
-        this.traces = {}
+        this.traces = []
     }
 
     load(traces: ITrace[]): void {
         traces.forEach(trace => {
             this.traces[trace.correlationId] = trace
         })
+        this.tracesCorrelationIds = traces.map(trace => trace.correlationId)
     }
 
     get<T>(correlationId: string): T | undefined {
-        const trace = this.traces[correlationId]
+        const found = findBestMatch(correlationId, this.tracesCorrelationIds);
+        const trace = this.traces[found.bestMatch.target]
         if (!trace){
             return undefined
         }

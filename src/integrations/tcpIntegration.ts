@@ -6,8 +6,8 @@ import {Integrations} from "./integrations";
 import {ITrace, Trace} from "../trace/Trace";
 import {Environments} from "../sharedKernel/constants";
 import {ChildProcess, fork} from "child_process";
+import {v4 as uuidV4} from 'uuid';
 import path from "path";
-import {ConnectOpts, Socket, SocketConnectOpts, TcpSocketConnectOpts} from "net";
 
 const shimmer = require("shimmer");
 const logger = require('../logger')
@@ -23,6 +23,7 @@ export class TcpIntegration extends Integrations implements IIntegration {
     private readonly DEBUG_HOST_NAME: string;
     private readonly DEBUG_HOST_PORT: number;
     private _tls: any;
+    private correlations: {};
 
     constructor() {
         super()
@@ -31,6 +32,7 @@ export class TcpIntegration extends Integrations implements IIntegration {
         this.isListenerAttached = false
         this.DEBUG_HOST_NAME = 'localhost'
         this.DEBUG_HOST_PORT = 52000
+        this.correlations = {}
     }
 
     public async init(tracer: Tracer, tracesLoader: TracesLoader, config: IIntegrationConfig) {
@@ -54,7 +56,7 @@ export class TcpIntegration extends Integrations implements IIntegration {
                 }
             } else {
                 shimmer.wrap(net.Socket.prototype, 'connect', this.wrapConnect());
-                shimmer.wrap(net.Socket.prototype, 'write', this.wrap());
+                shimmer.wrap(net.Socket.prototype, 'write', this.wrapWrite());
                 logger.info(`wrap tcp integration`, this.namespace)
             }
         }
@@ -67,20 +69,7 @@ export class TcpIntegration extends Integrations implements IIntegration {
     }
 
     private getCorrelation(request: string, __socket): string {
-        if (this.env === Environments.DEBUG) {
-            if (request.includes("HTTP")) {
-                /**
-                 * Because we are connecting to a local server we need to change the Host header
-                 */
-                const debugHost = `${this.DEBUG_HOST_NAME}:${this.DEBUG_HOST_PORT}`
-                const originalHost = `${__socket.originalRemoteHost}:${__socket.originalRemotePort}`
-                const originalRequest = request.replace(debugHost, originalHost)
-                return this.hashSha1(originalRequest)
-            }
-        }
-        console.log(request)
-
-        return this.hashSha1(request)
+        return request
     }
 
     private killChildProcess(process: ChildProcess) {
@@ -116,12 +105,14 @@ export class TcpIntegration extends Integrations implements IIntegration {
         const integration = this
         return function (connect) {
             return function (...args) {
+                const rebugitRequestId = uuidV4()
+                this.__rebugitRequestId = rebugitRequestId
+
                 this.addListener('data', function (data) {
                     const obj: ITrace = {
                         data: data.toString(),
-                        correlationId: this.correlationId
+                        correlationId: integration.correlations[rebugitRequestId]
                     }
-
                     const trace = new Trace(obj);
                     integration.tracer.add(trace.trace())
                 })
@@ -136,13 +127,20 @@ export class TcpIntegration extends Integrations implements IIntegration {
         }
     }
 
-    private wrap() {
+    private wrapWrite() {
         const integration = this;
         return (write) => {
             return function (...args) {
                 const rawData = args[0]
                 this.correlationIdRawData = rawData
-                this.correlationId = integration.getCorrelation(rawData.toString(), this)
+                const correlationId = integration.getCorrelation(rawData.toString(), this)
+                if (!this.remoteAddress) {
+                    if (!correlationId) {
+                        return write.apply(this, args);
+                    }
+                }
+
+                integration.correlations[this.__rebugitRequestId] = correlationId
 
                 try {
                     return write.apply(this, args);
