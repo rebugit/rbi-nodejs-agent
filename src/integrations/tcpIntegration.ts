@@ -69,6 +69,12 @@ export class TcpIntegration extends Integrations implements IIntegration {
     }
 
     private getCorrelation(request: string, __socket): string {
+        if (this.env === Environments.DEBUG && request.includes("HTTP")) {
+            const debugHost = `${this.DEBUG_HOST_NAME}:${this.DEBUG_HOST_PORT}`
+            const originalHost = `${__socket.originalRemoteHost}:${__socket.originalRemotePort}`
+            return request.replace(debugHost, originalHost)
+        }
+
         return request
     }
 
@@ -152,9 +158,13 @@ export class TcpIntegration extends Integrations implements IIntegration {
         }
     }
 
+    /**
+     * If the request is made via TLS it will fail to connect to the localhost mock server
+     * @private
+     */
     private wrapMockConnectTLS() {
         const integration = this
-        return function (connect) {
+        return function () {
             return function (...args: any[]) {
                 try {
                     // Effectively _net is never going to be null
@@ -221,11 +231,11 @@ export class TcpIntegration extends Integrations implements IIntegration {
             }
 
             if (this.type(firstArg) === "String") {
-
+                throw new Error("argument not implemented")
             }
 
             if (this.type(firstArg) === "Number") {
-
+                throw new Error("argument not implemented")
             }
 
         } else {
@@ -233,22 +243,22 @@ export class TcpIntegration extends Integrations implements IIntegration {
             if (this.type(firstArg) === "Object") {
                 __socket.originalRemoteHost = args[0].host
                 __socket.originalRemotePort = args[0].port
-                const newArgs = []
-                newArgs[0] = {}
-                newArgs[0].host = this.DEBUG_HOST_NAME
-                newArgs[0].port = this.DEBUG_HOST_PORT
-                newArgs[0].servername = this.DEBUG_HOST_NAME
-                newArgs[0].hostname = this.DEBUG_HOST_NAME
-                newArgs[1] = args[1]
-                return newArgs
+
+                args[0].host = this.DEBUG_HOST_NAME
+                args[0].port = this.DEBUG_HOST_PORT
+                args[0].servername = this.DEBUG_HOST_NAME
+                args[0].hostname = this.DEBUG_HOST_NAME
+                args[1] = args[1]
+
+                return args
             }
 
             if (this.type(firstArg) === "String") {
-
+                throw new Error("argument not implemented")
             }
 
             if (this.type(firstArg) === "Number") {
-
+                throw new Error("argument not implemented")
             }
         }
     }
@@ -275,6 +285,8 @@ export class TcpIntegration extends Integrations implements IIntegration {
                 shimmer.unwrap(this._net.Socket.prototype, 'connect');
             }
         }
+
+        this.correlations = {}
     }
 }
 

@@ -8,7 +8,7 @@ export class TracesLoader {
     private tracesCorrelationIds: string[]
 
     constructor() {
-        this.traces = []
+        this.traces = {}
     }
 
     load(traces: ITrace[]): void {
